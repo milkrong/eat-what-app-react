@@ -1,39 +1,45 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import 'react-native-reanimated';
+import { Slot, useRouter, useSegments } from 'expo-router';
+import { useAuthStore } from '../src/stores/useAuthStore';
 
-import { useColorScheme } from '@/hooks/useColorScheme';
-
-// Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync();
-
-export default function RootLayout() {
-  const colorScheme = useColorScheme();
-  const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-  });
+// 检查用户是否在认证组中
+function useProtectedRoute() {
+  const segments = useSegments();
+  const router = useRouter();
+  const { user, session } = useAuthStore();
 
   useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
+    const inAuthGroup = segments[0] === '(auth)';
+    const isLoggedIn = user && session;
+
+    if (!isLoggedIn && !inAuthGroup) {
+      // 如果未登录且不在认证页面，重定向到登录页
+      router.replace('/(auth)/login');
+    } else if (isLoggedIn) {
+      if (inAuthGroup) {
+        // 如果已登录，且在认证页面或根路径，重定向到首页
+        router.replace('/(tabs)');
+      }
     }
-  }, [loaded]);
+  }, [user, session, segments]);
+}
 
-  if (!loaded) {
-    return null;
-  }
+// 初始化路由
+function useInitialRoute() {
+  const router = useRouter();
+  const { user, session } = useAuthStore();
 
-  return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
-  );
+  useEffect(() => {
+    // 如果是开发模式或已登录，直接进入首页
+    if (process.env.EXPO_PUBLIC_DEV_MODE === 'true' || (user && session)) {
+      router.replace('/(tabs)');
+    }
+  }, []);
+}
+
+export default function RootLayout() {
+  useProtectedRoute();
+  useInitialRoute();
+
+  return <Slot />;
 }

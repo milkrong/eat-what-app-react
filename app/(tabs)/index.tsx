@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,9 +8,10 @@ import {
   ScrollView,
   Animated,
   Alert,
+  TextInput,
+  Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import { FontAwesome } from '@expo/vector-icons';
 import { useRecommendationStore } from '@/stores/useRecommendationStore';
 import { theme } from '@/theme';
@@ -18,24 +19,29 @@ import { Recipe as DBRecipe } from '@/types/recipe';
 import {
   Recipe as RecommendationRecipe,
   DietaryPreferences,
+  DietType,
 } from '@/types/recommendation';
 import { useRecipeStore } from '../../src/stores/useRecipeStore';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/stores/useAuthStore';
 
-const SkeletonLoader = ({
-  width,
-  height,
-  style,
-}: {
-  width: number | string;
-  height: number | string;
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+interface SkeletonLoaderProps {
+  width?: number | string;
+  height?: number | string;
   style?: any;
+}
+
+const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
+  width = 200,
+  height = 200,
+  style,
 }) => {
   const animatedValue = React.useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
-    const animation = Animated.loop(
+    Animated.loop(
       Animated.sequence([
         Animated.timing(animatedValue, {
           toValue: 1,
@@ -48,23 +54,23 @@ const SkeletonLoader = ({
           useNativeDriver: true,
         }),
       ])
-    );
-    animation.start();
-    return () => animation.stop();
+    ).start();
   }, []);
+
+  const opacity = animatedValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.3, 0.7],
+  });
 
   return (
     <Animated.View
       style={[
         {
-          width,
-          height,
+          width: typeof width === 'string' ? '100%' : width,
+          height: Number(height),
           backgroundColor: theme.colors.surface,
-          opacity: animatedValue.interpolate({
-            inputRange: [0, 1],
-            outputRange: [0.3, 0.7],
-          }),
-          borderRadius: 8,
+          borderRadius: theme.spacing.sm,
+          opacity,
         },
         style,
       ]}
@@ -145,22 +151,31 @@ const DailyRecommendationSkeleton = () => (
 );
 
 export default function RecommendationScreen() {
-  const [preferences, setPreferences] =
-    React.useState<DietaryPreferences | null>(null);
+  const [showPreferences, setShowPreferences] = useState(true);
+  const [localPreferences, setLocalPreferences] = useState<DietaryPreferences>({
+    diet_type: [],
+    cuisine_type: [],
+    allergies: [],
+    restrictions: [],
+    calories_min: 1500,
+    calories_max: 2500,
+    max_cooking_time: 45,
+    meals_per_day: 3,
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { session } = useAuthStore();
   const {
     currentRecommendation,
     dailyRecommendation,
     singleLoading,
     dailyLoading,
-    error,
     fetchRecommendation,
     fetchDailyRecommendation,
   } = useRecommendationStore();
-  const { session } = useAuthStore();
   const { saveRecipe } = useRecipeStore();
 
-  // 获取用户偏好设置
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchPreferences = async () => {
       if (!session?.access_token) return;
 
@@ -175,29 +190,222 @@ export default function RecommendationScreen() {
         );
         if (!response.ok) throw new Error('获取偏好设置失败');
         const data = await response.json();
-        console.log(data, 'preferences');
-        setPreferences(data);
-        // 获取到偏好设置后再请求推荐
-        fetchRecommendation(data);
-        fetchDailyRecommendation(data);
+        setLocalPreferences(data);
       } catch (error) {
         console.error('获取偏好设置失败:', error);
+        Alert.alert('错误', '获取偏好设置失败');
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchPreferences();
-  }, [session?.access_token]); // 当 access_token 变化时重新获取
+  }, [session?.access_token]);
+
+  const handleStartRecommendation = async () => {
+    try {
+      // 保存偏好设置
+      const response = await fetch(
+        `${process.env.EXPO_PUBLIC_API_URL}/users/preferences`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session?.access_token}`,
+          },
+          body: JSON.stringify(localPreferences),
+        }
+      );
+      if (!response.ok) throw new Error('保存偏好设置失败');
+
+      // 获取推荐
+      setShowPreferences(false);
+      await Promise.all([
+        fetchRecommendation(localPreferences),
+        fetchDailyRecommendation(localPreferences),
+      ]);
+    } catch (err) {
+      console.error('获取推荐失败:', err);
+      Alert.alert('错误', '获取推荐失败');
+    }
+  };
+
+  const renderPreferencesForm = () => (
+    <ScrollView style={styles.preferencesContainer}>
+      <Text style={styles.preferencesTitle}>设置偏好</Text>
+
+      <View style={styles.formSection}>
+        <Text style={styles.sectionTitle}>饮食类型</Text>
+        <View style={styles.chipContainer}>
+          {['regular', 'vegetarian', 'vegan', 'keto', 'paleo'].map((type) => (
+            <TouchableOpacity
+              key={type}
+              style={[
+                styles.chip,
+                localPreferences.diet_type.includes(type as DietType) &&
+                  styles.chipActive,
+              ]}
+              onPress={() => {
+                setLocalPreferences((prev) => ({
+                  ...prev,
+                  diet_type: prev.diet_type.includes(type as DietType)
+                    ? prev.diet_type.filter((t) => t !== type)
+                    : [...prev.diet_type, type as DietType],
+                }));
+              }}
+            >
+              <Text
+                style={[
+                  styles.chipText,
+                  localPreferences.diet_type.includes(type as DietType) &&
+                    styles.chipTextActive,
+                ]}
+              >
+                {type}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      <View style={styles.formSection}>
+        <Text style={styles.sectionTitle}>菜系偏好</Text>
+        <View style={styles.chipContainer}>
+          {['中餐', '西餐', '日料', '韩餐', '东南亚'].map((type) => (
+            <TouchableOpacity
+              key={type}
+              style={[
+                styles.chip,
+                localPreferences.cuisine_type.includes(type) &&
+                  styles.chipActive,
+              ]}
+              onPress={() => {
+                setLocalPreferences((prev) => ({
+                  ...prev,
+                  cuisine_type: prev.cuisine_type.includes(type)
+                    ? prev.cuisine_type.filter((t) => t !== type)
+                    : [...prev.cuisine_type, type],
+                }));
+              }}
+            >
+              <Text
+                style={[
+                  styles.chipText,
+                  localPreferences.cuisine_type.includes(type) &&
+                    styles.chipTextActive,
+                ]}
+              >
+                {type}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      <View style={styles.formSection}>
+        <Text style={styles.sectionTitle}>过敏原</Text>
+        <View style={styles.chipContainer}>
+          {['花生', '海鲜', '蛋类', '乳制品', '坚果'].map((type) => (
+            <TouchableOpacity
+              key={type}
+              style={[
+                styles.chip,
+                localPreferences.allergies.includes(type) && styles.chipActive,
+              ]}
+              onPress={() => {
+                setLocalPreferences((prev) => ({
+                  ...prev,
+                  allergies: prev.allergies.includes(type)
+                    ? prev.allergies.filter((t) => t !== type)
+                    : [...prev.allergies, type],
+                }));
+              }}
+            >
+              <Text
+                style={[
+                  styles.chipText,
+                  localPreferences.allergies.includes(type) &&
+                    styles.chipTextActive,
+                ]}
+              >
+                {type}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      <View style={styles.formSection}>
+        <Text style={styles.sectionTitle}>卡路里范围</Text>
+        <View style={styles.caloriesInputContainer}>
+          <View style={styles.caloriesInput}>
+            <Text style={styles.caloriesLabel}>最小值</Text>
+            <TextInput
+              style={styles.input}
+              value={String(localPreferences.calories_min)}
+              onChangeText={(value) =>
+                setLocalPreferences((prev) => ({
+                  ...prev,
+                  calories_min: parseInt(value) || 0,
+                }))
+              }
+              keyboardType="numeric"
+              placeholder="最小卡路里"
+            />
+          </View>
+          <View style={styles.caloriesInput}>
+            <Text style={styles.caloriesLabel}>最大值</Text>
+            <TextInput
+              style={styles.input}
+              value={String(localPreferences.calories_max)}
+              onChangeText={(value) =>
+                setLocalPreferences((prev) => ({
+                  ...prev,
+                  calories_max: parseInt(value) || 0,
+                }))
+              }
+              keyboardType="numeric"
+              placeholder="最大卡路里"
+            />
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.formSection}>
+        <Text style={styles.sectionTitle}>最大烹饪时间（分钟）</Text>
+        <TextInput
+          style={styles.input}
+          value={String(localPreferences.max_cooking_time)}
+          onChangeText={(value) =>
+            setLocalPreferences((prev) => ({
+              ...prev,
+              max_cooking_time: parseInt(value) || 0,
+            }))
+          }
+          keyboardType="numeric"
+          placeholder="最大烹饪时间"
+        />
+      </View>
+
+      <TouchableOpacity
+        style={styles.startButton}
+        onPress={handleStartRecommendation}
+      >
+        <Text style={styles.startButtonText}>开始推荐</Text>
+      </TouchableOpacity>
+    </ScrollView>
+  );
 
   const handleSkipRecommendation = () => {
-    if (!preferences) return;
+    if (!localPreferences) return;
     fetchRecommendation(
-      preferences,
+      localPreferences,
       currentRecommendation ? [currentRecommendation.name] : undefined
     );
   };
 
   const handleAddToRecipe = async () => {
-    if (!currentRecommendation || !preferences) return;
+    if (!currentRecommendation) return;
 
     try {
       const recipeData: Partial<DBRecipe> = {
@@ -225,35 +433,29 @@ export default function RecommendationScreen() {
         images: [],
       };
 
-      await saveRecipe(recipeData, {
-        diet_type: preferences.diet_type,
-        cuisine_type: preferences.cuisine_type,
-        allergies: preferences.allergies,
-        target_calories: preferences.target_calories,
-        max_cooking_time: preferences.max_cooking_time,
-        meals_per_day: preferences.meals_per_day,
-      });
+      await saveRecipe(recipeData, localPreferences);
       Alert.alert('成功', '已添加到我的食谱');
-    } catch (error) {
-      console.error('保存食谱失败:', error);
-      Alert.alert('错误', '保存食谱失败');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : '保存食谱失败';
+      console.error('保存食谱失败:', errorMessage);
+      Alert.alert('错误', errorMessage);
     }
   };
 
-  const handleReplace = async (mealType: 'breakfast' | 'lunch' | 'dinner') => {
-    if (!preferences) return;
-    // 刷新单个推荐
-    await fetchRecommendation(
-      {
-        ...preferences,
-        meals_per_day: 1, // 只需要一餐
-      },
-      currentRecommendation ? [currentRecommendation.name] : undefined
-    );
+  const handleReplace = async () => {
+    if (!currentRecommendation) return;
+
+    try {
+      await fetchRecommendation(localPreferences, [currentRecommendation.name]);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : '获取推荐失败';
+      console.error('获取推荐失败:', errorMessage);
+      Alert.alert('错误', errorMessage);
+    }
   };
 
   const handleApplyDailyRecommendation = async () => {
-    if (!dailyRecommendation || !preferences) return;
+    if (!dailyRecommendation) return;
 
     try {
       await Promise.all(
@@ -282,21 +484,13 @@ export default function RecommendationScreen() {
             })),
             images: [],
           };
-
-          return saveRecipe(recipeData, {
-            diet_type: preferences.diet_type,
-            cuisine_type: preferences.cuisine_type,
-            allergies: preferences.allergies,
-            target_calories: preferences.target_calories,
-            max_cooking_time: preferences.max_cooking_time,
-            meals_per_day: preferences.meals_per_day,
-          });
+          return saveRecipe(recipeData, localPreferences);
         })
       );
-      Alert.alert('成功', '已应用今日推荐');
-    } catch (error) {
-      console.error('应用今日推荐失败:', error);
-      Alert.alert('错误', '应用今日推荐失败');
+      Alert.alert('成功', '已添加所有推荐到我的食谱');
+    } catch (err) {
+      console.error('保存食谱失败:', err);
+      Alert.alert('错误', '保存食谱失败');
     }
   };
 
@@ -308,9 +502,9 @@ export default function RecommendationScreen() {
           <TouchableOpacity
             style={styles.retryButton}
             onPress={() => {
-              if (!preferences) return;
-              fetchRecommendation(preferences);
-              fetchDailyRecommendation(preferences);
+              if (!localPreferences) return;
+              fetchRecommendation(localPreferences);
+              fetchDailyRecommendation(localPreferences);
             }}
           >
             <Text style={styles.retryButtonText}>重试</Text>
@@ -325,7 +519,22 @@ export default function RecommendationScreen() {
       return <SingleRecommendationSkeleton />;
     }
 
-    if (!currentRecommendation) return null;
+    if (!currentRecommendation) {
+      return (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>获取推荐失败</Text>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={() => {
+              if (!localPreferences) return;
+              fetchRecommendation(localPreferences);
+            }}
+          >
+            <Text style={styles.retryButtonText}>重试</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
 
     return (
       <View style={styles.singleRecommendation}>
@@ -419,7 +628,22 @@ export default function RecommendationScreen() {
       return <DailyRecommendationSkeleton />;
     }
 
-    if (!dailyRecommendation) return null;
+    if (!dailyRecommendation) {
+      return (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>获取每日推荐失败</Text>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={() => {
+              if (!localPreferences) return;
+              fetchDailyRecommendation(localPreferences);
+            }}
+          >
+            <Text style={styles.retryButtonText}>重试</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
 
     const totalCalories = dailyRecommendation.reduce(
       (sum, meal) => sum + meal.calories,
@@ -489,11 +713,7 @@ export default function RecommendationScreen() {
               </View>
               <TouchableOpacity
                 style={styles.replaceMealButton}
-                onPress={() =>
-                  handleReplace(
-                    index === 0 ? 'breakfast' : index === 1 ? 'lunch' : 'dinner'
-                  )
-                }
+                onPress={handleReplace}
               >
                 <FontAwesome
                   name="refresh"
@@ -516,14 +736,40 @@ export default function RecommendationScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.content}>
-        {renderSingleRecommendation()}
-        {renderDailyRecommendation()}
+        {showPreferences ? (
+          renderPreferencesForm()
+        ) : (
+          <ScrollView
+            style={styles.recommendationsContainer}
+            showsVerticalScrollIndicator={false}
+          >
+            {renderSingleRecommendation()}
+            {renderDailyRecommendation()}
+          </ScrollView>
+        )}
       </View>
     </SafeAreaView>
   );
 }
+
+const baseTypography = {
+  body: {
+    fontSize: theme.typography.body.fontSize,
+    lineHeight: theme.typography.body.lineHeight,
+  },
+  h1: {
+    fontSize: theme.typography.h1.fontSize,
+    lineHeight: theme.typography.h1.lineHeight,
+    fontWeight: theme.typography.h1.fontWeight,
+  },
+  h2: {
+    fontSize: theme.typography.h2.fontSize,
+    lineHeight: theme.typography.h2.lineHeight,
+    fontWeight: theme.typography.h2.fontWeight,
+  },
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -533,83 +779,95 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
-  loadingText: {
-    ...theme.typography.body,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
+  preferencesContainer: {
+    flex: 1,
+    padding: theme.spacing.md,
+  },
+  preferencesTitle: {
+    ...baseTypography.h1,
+    color: theme.colors.text,
+    marginBottom: theme.spacing.xl,
+  },
+  formSection: {
+    marginBottom: theme.spacing.lg,
+  },
+  sectionTitle: {
+    ...baseTypography.h2,
+    color: theme.colors.text,
+    marginBottom: theme.spacing.sm,
+  },
+  chipContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: theme.spacing.sm,
+  },
+  chip: {
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
+    borderRadius: theme.spacing.sm,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.surface,
+  },
+  chipActive: {
+    backgroundColor: theme.colors.primary + '20',
+    borderColor: theme.colors.primary,
+  },
+  chipText: {
+    ...baseTypography.body,
+    color: theme.colors.text,
+  },
+  chipTextActive: {
+    color: theme.colors.primary,
+  },
+  input: {
+    backgroundColor: theme.colors.surface,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.spacing.sm,
+    color: theme.colors.text,
+    fontSize: 16,
+    height: 48,
+  },
+  startButton: {
+    backgroundColor: theme.colors.primary,
+    padding: theme.spacing.md,
+    borderRadius: theme.spacing.sm,
+    alignItems: 'center',
     marginTop: theme.spacing.xl,
+  },
+  startButtonText: {
+    color: theme.colors.background,
+    ...baseTypography.body,
+    fontWeight: 'bold',
+  },
+  errorContainer: {
+    padding: theme.spacing.md,
+    alignItems: 'center',
   },
   errorText: {
     color: theme.colors.error,
-    textAlign: 'center',
+    ...baseTypography.body,
     marginBottom: theme.spacing.md,
   },
   retryButton: {
     backgroundColor: theme.colors.primary,
     padding: theme.spacing.md,
-    borderRadius: 12,
+    borderRadius: theme.spacing.sm,
     alignItems: 'center',
-    marginHorizontal: theme.spacing.md,
+    minWidth: 120,
   },
   retryButtonText: {
-    ...theme.typography.body,
     color: theme.colors.background,
+    ...baseTypography.body,
     fontWeight: 'bold',
   },
   singleRecommendation: {
-    margin: theme.spacing.md,
-    borderRadius: 16,
-    overflow: 'hidden',
-    height: 400,
-  },
-  recommendationGradient: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 1,
-    padding: theme.spacing.md,
-  },
-  recommendationHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  matchScore: {
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    padding: theme.spacing.sm,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  matchScoreText: {
-    ...theme.typography.h2,
-    color: theme.colors.primary,
-  },
-  matchScoreLabel: {
-    ...theme.typography.caption,
-    color: theme.colors.textSecondary,
-  },
-  recommendationTags: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'flex-end',
-    maxWidth: '70%',
-  },
-  tag: {
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs,
-    borderRadius: 12,
-    marginLeft: theme.spacing.xs,
-    marginBottom: theme.spacing.xs,
-  },
-  tagText: {
-    ...theme.typography.caption,
-    color: theme.colors.text,
-  },
-  recommendationImage: {
     width: '100%',
-    height: '100%',
+    height: 400,
+    borderRadius: theme.spacing.sm,
+    overflow: 'hidden',
+    marginVertical: theme.spacing.md,
   },
   recommendationInfo: {
     position: 'absolute',
@@ -618,22 +876,68 @@ const styles = StyleSheet.create({
     right: 0,
     padding: theme.spacing.md,
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'flex-end',
+    justifyContent: 'space-between',
+  },
+  recommendationActions: {
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
+  },
+  recommendationGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 120,
+    zIndex: 1,
+  },
+  recommendationHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    padding: theme.spacing.md,
+  },
+  matchScore: {
+    alignItems: 'center',
+  },
+  matchScoreText: {
+    ...theme.typography.h1,
+    color: theme.colors.background,
+  },
+  matchScoreLabel: {
+    ...theme.typography.caption,
+    color: theme.colors.background,
+  },
+  recommendationTags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: theme.spacing.xs,
+  },
+  tag: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
+    borderRadius: theme.spacing.sm,
+  },
+  tagText: {
+    ...theme.typography.caption,
+    color: theme.colors.background,
+  },
+  recommendationImage: {
+    width: '100%',
+    height: '100%',
   },
   recommendationContent: {
     flex: 1,
-    marginRight: theme.spacing.md,
   },
   recommendationTitle: {
-    ...theme.typography.h1,
+    ...theme.typography.h2,
     color: theme.colors.background,
     marginBottom: theme.spacing.xs,
   },
   recipeMetrics: {
     flexDirection: 'row',
     gap: theme.spacing.md,
-    marginTop: theme.spacing.xs,
   },
   metricItem: {
     flexDirection: 'row',
@@ -644,10 +948,6 @@ const styles = StyleSheet.create({
     ...theme.typography.caption,
     color: theme.colors.background,
   },
-  recommendationActions: {
-    flexDirection: 'row',
-    gap: theme.spacing.sm,
-  },
   actionButton: {
     width: 44,
     height: 44,
@@ -656,16 +956,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   skipButton: {
-    backgroundColor: 'rgba(255,255,255,0.9)',
+    backgroundColor: theme.colors.background,
   },
   addButton: {
     backgroundColor: theme.colors.primary,
   },
   dailyRecommendation: {
-    margin: theme.spacing.md,
     padding: theme.spacing.md,
     backgroundColor: theme.colors.surface,
-    borderRadius: 16,
+    borderRadius: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -673,22 +973,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: theme.spacing.md,
   },
-  sectionTitle: {
-    ...theme.typography.h2,
-    color: theme.colors.text,
-  },
   nutritionBadge: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: theme.spacing.xs,
     backgroundColor: theme.colors.primary + '20',
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
-    borderRadius: 12,
+    borderRadius: theme.spacing.sm,
   },
   nutritionScore: {
     ...theme.typography.caption,
     color: theme.colors.primary,
-    marginLeft: theme.spacing.xs,
   },
   nutritionStats: {
     marginBottom: theme.spacing.md,
@@ -702,7 +998,7 @@ const styles = StyleSheet.create({
   },
   nutritionValue: {
     ...theme.typography.h2,
-    color: theme.colors.text,
+    color: theme.colors.primary,
   },
   nutritionLabel: {
     ...theme.typography.caption,
@@ -713,17 +1009,19 @@ const styles = StyleSheet.create({
   },
   mealCard: {
     flexDirection: 'row',
+    alignItems: 'center',
+    padding: theme.spacing.sm,
     backgroundColor: theme.colors.background,
-    borderRadius: 12,
-    overflow: 'hidden',
+    borderRadius: theme.spacing.sm,
   },
   mealImage: {
     width: 80,
     height: 80,
+    borderRadius: theme.spacing.sm,
   },
   mealInfo: {
     flex: 1,
-    padding: theme.spacing.md,
+    marginLeft: theme.spacing.md,
   },
   mealType: {
     ...theme.typography.caption,
@@ -732,20 +1030,24 @@ const styles = StyleSheet.create({
   mealName: {
     ...theme.typography.body,
     color: theme.colors.text,
-    marginVertical: 2,
+    marginVertical: theme.spacing.xs,
   },
   mealCalories: {
     ...theme.typography.caption,
-    color: theme.colors.primary,
+    color: theme.colors.textSecondary,
   },
   replaceMealButton: {
-    padding: theme.spacing.sm,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: theme.colors.primary + '20',
     justifyContent: 'center',
+    alignItems: 'center',
   },
   applyDailyButton: {
     backgroundColor: theme.colors.primary,
     padding: theme.spacing.md,
-    borderRadius: 12,
+    borderRadius: theme.spacing.sm,
     alignItems: 'center',
     marginTop: theme.spacing.md,
   },
@@ -753,5 +1055,20 @@ const styles = StyleSheet.create({
     ...theme.typography.body,
     color: theme.colors.background,
     fontWeight: 'bold',
+  },
+  caloriesInputContainer: {
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
+  },
+  caloriesInput: {
+    flex: 1,
+  },
+  caloriesLabel: {
+    ...theme.typography.caption,
+    color: theme.colors.textSecondary,
+  },
+  recommendationsContainer: {
+    flex: 1,
+    paddingHorizontal: theme.spacing.md,
   },
 });

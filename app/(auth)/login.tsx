@@ -86,9 +86,11 @@ const styles = StyleSheet.create({
   },
   input: {
     backgroundColor: theme.colors.surface,
-    padding: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
     borderRadius: 12,
-    ...theme.typography.body,
+    fontSize: 16,
+    height: 48,
     color: theme.colors.text,
   },
   button: {

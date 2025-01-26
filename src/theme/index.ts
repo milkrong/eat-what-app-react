@@ -7,6 +7,7 @@ export const colors = {
   text: '#191D38',
   textSecondary: '#7E8A8C',
   active: '#00B6DF',
+  success: '#00B6DF',
 } as const;
 
 export const spacing = {

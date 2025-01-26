@@ -1,45 +1,66 @@
+import { Stack } from 'expo-router';
 import { useEffect } from 'react';
-import { Slot, useRouter, useSegments } from 'expo-router';
-import { useAuthStore } from '../src/stores/useAuthStore';
+import { useAuthStore } from '@/stores/useAuthStore';
+import Toast, { ToastProps } from 'react-native-toast-message';
+import { BaseToast } from 'react-native-toast-message/lib/src/components/BaseToast';
+import { theme } from '@/theme';
 
-// 检查用户是否在认证组中
-function useProtectedRoute() {
-  const segments = useSegments();
-  const router = useRouter();
-  const { user, session } = useAuthStore();
-
-  useEffect(() => {
-    const inAuthGroup = segments[0] === '(auth)';
-    const isLoggedIn = user && session;
-
-    if (!isLoggedIn && !inAuthGroup) {
-      // 如果未登录且不在认证页面，重定向到登录页
-      router.replace('/(auth)/login');
-    } else if (isLoggedIn) {
-      if (inAuthGroup) {
-        // 如果已登录，且在认证页面或根路径，重定向到首页
-        router.replace('/(tabs)');
-      }
-    }
-  }, [user, session, segments]);
-}
-
-// 初始化路由
-function useInitialRoute() {
-  const router = useRouter();
-  const { user, session } = useAuthStore();
-
-  useEffect(() => {
-    // 如果是开发模式或已登录，直接进入首页
-    if (process.env.EXPO_PUBLIC_DEV_MODE === 'true' || (user && session)) {
-      router.replace('/(tabs)');
-    }
-  }, []);
-}
+const toastConfig = {
+  success: (props: ToastProps) => (
+    <BaseToast
+      {...props}
+      style={{
+        borderLeftColor: theme.colors.success,
+        backgroundColor: theme.colors.background,
+      }}
+      contentContainerStyle={{ paddingHorizontal: 15 }}
+      text1Style={{
+        fontSize: 16,
+        fontWeight: '600',
+        color: theme.colors.text,
+      }}
+      text2Style={{
+        fontSize: 14,
+        color: theme.colors.textSecondary,
+      }}
+    />
+  ),
+  error: (props: ToastProps) => (
+    <BaseToast
+      {...props}
+      style={{
+        borderLeftColor: theme.colors.error,
+        backgroundColor: theme.colors.background,
+      }}
+      contentContainerStyle={{ paddingHorizontal: 15 }}
+      text1Style={{
+        fontSize: 16,
+        fontWeight: '600',
+        color: theme.colors.text,
+      }}
+      text2Style={{
+        fontSize: 14,
+        color: theme.colors.textSecondary,
+      }}
+    />
+  ),
+};
 
 export default function RootLayout() {
-  useProtectedRoute();
-  useInitialRoute();
+  const { refreshToken } = useAuthStore();
 
-  return <Slot />;
+  useEffect(() => {
+    refreshToken();
+  }, []);
+
+  return (
+    <>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+        }}
+      />
+      <Toast config={toastConfig} />
+    </>
+  );
 }

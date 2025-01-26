@@ -26,7 +26,8 @@ interface AuthState {
   refreshToken: () => Promise<void>;
 }
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3002/api';
+const API_URL =
+  process.env.EXPO_PUBLIC_API_URL || 'https://eatwhatapi.cattenbox.com/api';
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,

@@ -1,14 +1,37 @@
+export interface Recipe {
+  id: string;
+  name: string;
+  description: string | null;
+  ingredients: Ingredient[] | null;
+  steps: Step[] | null;
+  calories: number | null;
+  cooking_time: number | null;
+  nutrition_facts: NutritionFacts | null;
+  cuisine_type: string[] | null;
+  diet_type: string[] | null;
+  image_url: string | null;
+  created_by: string | null;
+  views: number | null;
+  created_at: string | null;
+  updated_at: string | null;
+  is_favorite?: boolean;
+}
+
+export interface RecipeFilters {
+  cuisineType?: string;
+  maxCookingTime?: number;
+  dietType?: string[];
+}
+
 export interface Ingredient {
   name: string;
   amount: number;
   unit: string;
-  category: string;
 }
 
 export interface Step {
   order: number;
   description: string;
-  image_url?: string;
 }
 
 export interface NutritionFacts {
@@ -16,20 +39,4 @@ export interface NutritionFacts {
   carbs: number;
   fat: number;
   fiber: number;
-}
-
-export interface Recipe {
-  id: string;
-  name: string;
-  description: string;
-  difficulty: 'easy' | 'medium' | 'hard';
-  cooking_time: number;
-  calories: number;
-  servings: number;
-  nutrition_facts: NutritionFacts;
-  ingredients: Ingredient[];
-  steps: Step[];
-  images: string[];
-  is_favorite?: boolean;
-  related_recipes?: string[];
 }

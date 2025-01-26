@@ -1,8 +1,9 @@
-@host = http://localhost:3002
+@host = https://eatwhatapi.cattenbox.com
 @baseUrl = {{host}}/api
-@auth_token = Bearer eyJhbGciOiJIUzI1NiIsImtpZCI6IjJJQXF4OVFvSUhGcnliL1kiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2F2Z2h1amdtcGl3c2tzcmN2dXZlLnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiJjZDQ3Y2NmNS05MDM2LTQwYmMtOTdmYy1kYzcwZWUwNTE5ZmIiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzMzNDY0NzYxLCJpYXQiOjE3MzM0NjExNjEsImVtYWlsIjoibWlsa3JvbmcxMjFAb3V0bG9vay5jb20iLCJwaG9uZSI6IiIsImFwcF9tZXRhZGF0YSI6eyJwcm92aWRlciI6ImVtYWlsIiwicHJvdmlkZXJzIjpbImVtYWlsIl19LCJ1c2VyX21ldGFkYXRhIjp7ImVtYWlsIjoibWlsa3JvbmcxMjFAb3V0bG9vay5jb20iLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsInBob25lX3ZlcmlmaWVkIjpmYWxzZSwic3ViIjoiY2Q0N2NjZjUtOTAzNi00MGJjLTk3ZmMtZGM3MGVlMDUxOWZiIiwidXNlcm5hbWUiOiJ0ZXN0bmFtZSJ9LCJyb2xlIjoiYXV0aGVudGljYXRlZCIsImFhbCI6ImFhbDEiLCJhbXIiOlt7Im1ldGhvZCI6InBhc3N3b3JkIiwidGltZXN0YW1wIjoxNzMzNDYxMTYxfV0sInNlc3Npb25faWQiOiIwOGZhNzNkMi0wYzhhLTQwNjUtODBiOC1lNzhiMTJiZjE0NGMiLCJpc19hbm9ueW1vdXMiOmZhbHNlfQ.3fvKBIlstk6uOi_w4bXB0UqPgnFR8Svh_S7g0LYFssA
+@auth_token = eyJhbGciOiJIUzI1NiIsImtpZCI6IjJJQXF4OVFvSUhGcnliL1kiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2F2Z2h1amdtcGl3c2tzcmN2dXZlLnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiJjZDQ3Y2NmNS05MDM2LTQwYmMtOTdmYy1kYzcwZWUwNTE5ZmIiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzM2MjQzMDIxLCJpYXQiOjE3MzU4ODMwMjEsImVtYWlsIjoibWlsa3JvbmcxMjFAb3V0bG9vay5jb20iLCJwaG9uZSI6IiIsImFwcF9tZXRhZGF0YSI6eyJwcm92aWRlciI6ImVtYWlsIiwicHJvdmlkZXJzIjpbImVtYWlsIl19LCJ1c2VyX21ldGFkYXRhIjp7ImVtYWlsIjoibWlsa3JvbmcxMjFAb3V0bG9vay5jb20iLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsInBob25lX3ZlcmlmaWVkIjpmYWxzZSwic3ViIjoiY2Q0N2NjZjUtOTAzNi00MGJjLTk3ZmMtZGM3MGVlMDUxOWZiIiwidXNlcm5hbWUiOiJ0ZXN0bmFtZSJ9LCJyb2xlIjoiYXV0aGVudGljYXRlZCIsImFhbCI6ImFhbDEiLCJhbXIiOlt7Im1ldGhvZCI6InBhc3N3b3JkIiwidGltZXN0YW1wIjoxNzM1ODgzMDIxfV0sInNlc3Npb25faWQiOiIwM2IwZmFjZi03MGUxLTQxYmUtODUwNy00NWNkNzQwOGQ3M2UiLCJpc19hbm9ueW1vdXMiOmZhbHNlfQ.egq1r2Ut0qNa4pCAKp0khpF3G6YF0z_YAlun0AStx9k
+@recipeId= 93939
+@sessionId= 03b0fafcf-70e1-41b-8507-45cd7408d73e
 ### 认证相关 API ###
-
 ### 用户注册
 POST {{baseUrl}}/auth/register
 Content-Type: application/json
@@ -18,8 +19,8 @@ POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "email": "test@example.com",
-  "password": "your-password"
+  "email": "milkrong121@outlook.com",
+  "password": "Milkkai5315!?!"
 }
 
 ### 获取当前用户信息
@@ -38,6 +39,7 @@ Authorization: Bearer {{auth_token}}
 
 ### 获取食谱列表
 GET {{baseUrl}}/recipes
+Authorization: Bearer {{auth_token}}
 Content-Type: application/json
 
 ### 获取单个食谱
@@ -50,40 +52,82 @@ Content-Type: application/json
 Authorization: Bearer {{auth_token}}
 
 {
-  "name": "红烧肉",
-  "description": "经典的中国菜",
+  "name": "麻婆豆腐",
   "ingredients": [
     {
-      "name": "五花肉",
+      "name": "北豆腐",
       "amount": 500,
-      "unit": "g"
+      "unit": "克"
+    },
+    {
+      "name": "牛肉末",
+      "amount": 100,
+      "unit": "克"
+    },
+    {
+      "name": "豆瓣酱",
+      "amount": 2,
+      "unit": "勺"
+    },
+    {
+      "name": "蒜苗",
+      "amount": 3,
+      "unit": "根"
+    },
+    {
+      "name": "生姜",
+      "amount": 5,
+      "unit": "克"
+    },
+    {
+      "name": "大蒜",
+      "amount": 3,
+      "unit": "瓣"
+    },
+    {
+      "name": "辣椒粉",
+      "amount": 1,
+      "unit": "勺"
     },
     {
       "name": "生抽",
-      "amount": 30,
-      "unit": "ml"
-    }
-  ],
-  "steps": [
-    {
-      "order": 1,
-      "description": "将五花肉切块"
+      "amount": 2,
+      "unit": "勺"
     },
     {
-      "order": 2,
-      "description": "锅中加油，放入五花肉煸炒"
+      "name": "水淀粉",
+      "amount": 0.5,
+      "unit": "杯"
+    },
+    {
+      "name": "花椒粒",
+      "amount": 8,
+      "unit": "粒"
     }
   ],
-  "calories": 650,
-  "cooking_time": 45,
+  "calories": 2000,
+  "cooking_time": 30,
   "nutrition_facts": {
-    "protein": 25,
-    "carbs": 5,
-    "fat": 45,
-    "fiber": 1
+    "protein": 40,
+    "fat": 15,
+    "carbs": 100,
+    "fiber": 8
   },
-  "cuisine_type": "chinese",
-  "diet_type": ["meat", "keto"]
+  "steps": [
+    "将北豆腐切成2厘米见方的小块，用开水焯烫后捞出备用。",
+    "蒜苗切段，生姜和大蒜剁碎备用。",
+    "锅中放油烧热，加入牛肉末翻炒至变色。",
+    "加入豆瓣酱、姜蒜末和辣椒粉继续翻炒出红油。",
+    "加入适量水，放入花椒粒煮沸。",
+    "加入焯好的豆腐块，用中小火慢炖5分钟。",
+    "用水淀粉勾芡，最后撒上蒜苗段即可出锅。"
+  ],
+  "cuisine_type": [
+    "川菜"
+  ],
+  "diet_type": [
+    "素食"
+  ]
 }
 
 ### 更新食谱（需要认证）
@@ -98,6 +142,20 @@ Authorization: Bearer {{auth_token}}
 
 ### 删除食谱（需要认证）
 DELETE {{baseUrl}}/recipes/1
+Authorization: Bearer {{auth_token}}
+
+### 食谱收藏相关 API ###
+
+### 获取用户的食谱收藏列表
+GET {{baseUrl}}/users/favorites
+Authorization: Bearer {{auth_token}}
+
+### 添加食谱到收藏
+POST {{baseUrl}}/users/favorites/{{recipeId}}
+Authorization: Bearer {{auth_token}}
+
+### 从收藏中移除食谱
+DELETE {{baseUrl}}/users/favorites/{{recipeId}}
 Authorization: Bearer {{auth_token}}
 
 ### 餐饮计划相关 API ###
@@ -130,42 +188,98 @@ Authorization: Bearer {{auth_token}}
 DELETE {{baseUrl}}/meal-plans/1
 Authorization: Bearer {{auth_token}}
 
+### 生成餐饮计划
+POST {{baseUrl}}/meal-plans/generate
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+{
+  "startDate": "2024-01-15T00:00:00Z",
+  "endDate": "2024-01-21T23:59:59Z",
+  "preferences": {
+    "cuisineTypes": ["中餐", "日料"],
+    "dietTypes": ["均衡"],
+    "maxCookingTime": 45,
+    "caloriesPerDay": 2000
+  }
+}
+
 ### 推荐相关 API ###
 
 ### 获取单餐推荐
 POST {{baseUrl}}/recommendations/single
+Authorization: Bearer {{auth_token}}
 Content-Type: application/json
 
 {
-  "cuisineTypes": ["chinese"],
-  "dietTypes": ["vegetarian"],
-  "maxCookingTime": 30,
-  "caloriesRange": {
-    "min": 300,
-    "max": 600
-  }
+  "preferences": {
+    "diet_type": ["素食"],
+    "cuisine_type": ["川菜"],
+    "allergies": ["花生"],
+    "restrictions": ["无麸质"],
+    "calories_min": 1800,
+    "calories_max": 2200,
+    "max_cooking_time": 45,
+    "meals_per_day": 3
+  },
+  "provider": "deepseek"
 }
 
 ### 获取每日推荐
 POST {{baseUrl}}/recommendations/daily
+Authorization: Bearer {{auth_token}}
 Content-Type: application/json
 
 {
-  "cuisineTypes": ["chinese", "western"],
-  "dietTypes": ["balanced"],
-  "maxCookingTime": 45,
-  "caloriesPerDay": 2000
+  "preferences": {
+    "diet_type": ["均衡"],
+    "cuisine_type": ["川菜", "粤菜"],
+    "allergies": [],
+    "restrictions": [],
+    "calories_min": 1800,
+    "calories_max": 2200,
+    "max_cooking_time": 45,
+    "meals_per_day": 3
+  },
+  "provider": "ollama"
 }
 
 ### 获取每周推荐
 POST {{baseUrl}}/recommendations/weekly
+Authorization: Bearer {{auth_token}}
 Content-Type: application/json
 
 {
-  "cuisineTypes": ["chinese", "western", "japanese"],
-  "dietTypes": ["balanced"],
-  "maxCookingTime": 45,
-  "caloriesPerDay": 2000
+  "preferences": {
+    "diet_type": ["均衡"],
+    "cuisine_type": ["中餐", "西餐", "日料"],
+    "allergies": [],
+    "restrictions": [],
+    "calories_min": 1800,
+    "calories_max": 2200,
+    "max_cooking_time": 45,
+    "meals_per_day": 3
+  },
+  "provider": "ollama"
+}
+
+### 获取单餐推荐（流式响应）
+POST {{baseUrl}}/recommendations/single/stream
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+{
+  "preferences": {
+    "diet_type": ["素食"],
+    "cuisine_type": ["川菜"],
+    "allergies": ["花生"],
+    "restrictions": ["无麸质"],
+    "calories_min": 1800,
+    "calories_max": 2200,
+    "max_cooking_time": 45,
+    "meals_per_day": 3
+  },
+  "provider": "deepseek"
 }
 
 ### 用户相关 API ###
@@ -208,7 +322,19 @@ Authorization: Bearer {{auth_token}}
 
 ### 手动触发缓存预热
 POST {{baseUrl}}/admin/cache/warmup
-Authorization: Bearer {{auth_token}} 
+Authorization: Bearer {{auth_token}}
+
+### 获取缓存预热会话列表
+GET {{baseUrl}}/admin/cache/warmup/sessions
+Authorization: Bearer {{auth_token}}
+
+### 获取特定缓存预热会话详情
+GET {{baseUrl}}/admin/cache/warmup/sessions/{{sessionId}}
+Authorization: Bearer {{auth_token}}
+
+### 获取缓存预热概要信息
+GET {{baseUrl}}/admin/cache/warmup/summary
+Authorization: Bearer {{auth_token}}
 
 ### 健康检查
 GET {{baseUrl}}/health

@@ -7,7 +7,8 @@ import {
 } from '../types/recommendation';
 import { useAuthStore } from './useAuthStore';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3002/api';
+const API_URL =
+  process.env.EXPO_PUBLIC_API_URL || 'https://eatwhatapi.cattenbox.com/api';
 
 // 获取认证头
 const getAuthHeaders = () => {

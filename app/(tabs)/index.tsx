@@ -24,6 +24,12 @@ import {
 import { useRecipeStore } from '../../src/stores/useRecipeStore';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { usePreferencesStore } from '@/stores/usePreferencesStore';
+import {
+  ALLERGY_OPTIONS,
+  CUISINE_TYPE_OPTIONS,
+  DIET_TYPE_OPTIONS,
+} from '@/constants/preferences';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -152,16 +158,6 @@ const DailyRecommendationSkeleton = () => (
 
 export default function RecommendationScreen() {
   const [showPreferences, setShowPreferences] = useState(true);
-  const [localPreferences, setLocalPreferences] = useState<DietaryPreferences>({
-    diet_type: [],
-    cuisine_type: [],
-    allergies: [],
-    restrictions: [],
-    calories_min: 1500,
-    calories_max: 2500,
-    max_cooking_time: 45,
-    meals_per_day: 3,
-  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { session } = useAuthStore();
@@ -173,24 +169,20 @@ export default function RecommendationScreen() {
     fetchRecommendation,
     fetchDailyRecommendation,
   } = useRecommendationStore();
+  const {
+    preferences,
+    loading: preferencesLoading,
+    fetchPreferences,
+    updatePreferences,
+  } = usePreferencesStore();
   const { saveRecipe } = useRecipeStore();
 
   useEffect(() => {
-    const fetchPreferences = async () => {
+    const loadPreferences = async () => {
       if (!session?.access_token) return;
 
       try {
-        const response = await fetch(
-          `${process.env.EXPO_PUBLIC_API_URL}/users/preferences`,
-          {
-            headers: {
-              Authorization: `Bearer ${session.access_token}`,
-            },
-          }
-        );
-        if (!response.ok) throw new Error('获取偏好设置失败');
-        const data = await response.json();
-        setLocalPreferences(data);
+        await fetchPreferences();
       } catch (error) {
         console.error('获取偏好设置失败:', error);
         Alert.alert('错误', '获取偏好设置失败');
@@ -199,30 +191,21 @@ export default function RecommendationScreen() {
       }
     };
 
-    fetchPreferences();
+    loadPreferences();
   }, [session?.access_token]);
 
   const handleStartRecommendation = async () => {
+    if (!preferences) return;
+
     try {
       // 保存偏好设置
-      const response = await fetch(
-        `${process.env.EXPO_PUBLIC_API_URL}/users/preferences`,
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${session?.access_token}`,
-          },
-          body: JSON.stringify(localPreferences),
-        }
-      );
-      if (!response.ok) throw new Error('保存偏好设置失败');
+      await updatePreferences(preferences);
 
       // 获取推荐
       setShowPreferences(false);
       await Promise.all([
-        fetchRecommendation(localPreferences),
-        fetchDailyRecommendation(localPreferences),
+        fetchRecommendation(preferences),
+        fetchDailyRecommendation(preferences),
       ]);
     } catch (err) {
       console.error('获取推荐失败:', err);
@@ -237,27 +220,31 @@ export default function RecommendationScreen() {
       <View style={styles.formSection}>
         <Text style={styles.sectionTitle}>饮食类型</Text>
         <View style={styles.chipContainer}>
-          {['regular', 'vegetarian', 'vegan', 'keto', 'paleo'].map((type) => (
+          {DIET_TYPE_OPTIONS.map((type) => (
             <TouchableOpacity
               key={type}
               style={[
                 styles.chip,
-                localPreferences.diet_type.includes(type as DietType) &&
+                preferences?.diet_type.includes(type as DietType) &&
                   styles.chipActive,
               ]}
               onPress={() => {
-                setLocalPreferences((prev) => ({
-                  ...prev,
-                  diet_type: prev.diet_type.includes(type as DietType)
-                    ? prev.diet_type.filter((t) => t !== type)
-                    : [...prev.diet_type, type as DietType],
-                }));
+                if (!preferences) return;
+                const currentValue = preferences.diet_type;
+                usePreferencesStore.setState({
+                  preferences: {
+                    ...preferences,
+                    diet_type: currentValue.includes(type as DietType)
+                      ? currentValue.filter((t) => t !== type)
+                      : [...currentValue, type as DietType],
+                  },
+                });
               }}
             >
               <Text
                 style={[
                   styles.chipText,
-                  localPreferences.diet_type.includes(type as DietType) &&
+                  preferences?.diet_type.includes(type as DietType) &&
                     styles.chipTextActive,
                 ]}
               >
@@ -271,27 +258,30 @@ export default function RecommendationScreen() {
       <View style={styles.formSection}>
         <Text style={styles.sectionTitle}>菜系偏好</Text>
         <View style={styles.chipContainer}>
-          {['中餐', '西餐', '日料', '韩餐', '东南亚'].map((type) => (
+          {CUISINE_TYPE_OPTIONS.map((type) => (
             <TouchableOpacity
               key={type}
               style={[
                 styles.chip,
-                localPreferences.cuisine_type.includes(type) &&
-                  styles.chipActive,
+                preferences?.cuisine_type.includes(type) && styles.chipActive,
               ]}
               onPress={() => {
-                setLocalPreferences((prev) => ({
-                  ...prev,
-                  cuisine_type: prev.cuisine_type.includes(type)
-                    ? prev.cuisine_type.filter((t) => t !== type)
-                    : [...prev.cuisine_type, type],
-                }));
+                if (!preferences) return;
+                const currentValue = preferences.cuisine_type;
+                usePreferencesStore.setState({
+                  preferences: {
+                    ...preferences,
+                    cuisine_type: currentValue.includes(type)
+                      ? currentValue.filter((t) => t !== type)
+                      : [...currentValue, type],
+                  },
+                });
               }}
             >
               <Text
                 style={[
                   styles.chipText,
-                  localPreferences.cuisine_type.includes(type) &&
+                  preferences?.cuisine_type.includes(type) &&
                     styles.chipTextActive,
                 ]}
               >
@@ -305,26 +295,30 @@ export default function RecommendationScreen() {
       <View style={styles.formSection}>
         <Text style={styles.sectionTitle}>过敏原</Text>
         <View style={styles.chipContainer}>
-          {['花生', '海鲜', '蛋类', '乳制品', '坚果'].map((type) => (
+          {ALLERGY_OPTIONS.map((type) => (
             <TouchableOpacity
               key={type}
               style={[
                 styles.chip,
-                localPreferences.allergies.includes(type) && styles.chipActive,
+                preferences?.allergies.includes(type) && styles.chipActive,
               ]}
               onPress={() => {
-                setLocalPreferences((prev) => ({
-                  ...prev,
-                  allergies: prev.allergies.includes(type)
-                    ? prev.allergies.filter((t) => t !== type)
-                    : [...prev.allergies, type],
-                }));
+                if (!preferences) return;
+                const currentValue = preferences.allergies;
+                usePreferencesStore.setState({
+                  preferences: {
+                    ...preferences,
+                    allergies: currentValue.includes(type)
+                      ? currentValue.filter((t) => t !== type)
+                      : [...currentValue, type],
+                  },
+                });
               }}
             >
               <Text
                 style={[
                   styles.chipText,
-                  localPreferences.allergies.includes(type) &&
+                  preferences?.allergies.includes(type) &&
                     styles.chipTextActive,
                 ]}
               >
@@ -342,12 +336,14 @@ export default function RecommendationScreen() {
             <Text style={styles.caloriesLabel}>最小值</Text>
             <TextInput
               style={styles.input}
-              value={String(localPreferences.calories_min)}
+              value={String(preferences?.calories_min || 1500)}
               onChangeText={(value) =>
-                setLocalPreferences((prev) => ({
-                  ...prev,
-                  calories_min: parseInt(value) || 0,
-                }))
+                usePreferencesStore.setState({
+                  preferences: {
+                    ...preferences!,
+                    calories_min: parseInt(value) || 0,
+                  },
+                })
               }
               keyboardType="numeric"
               placeholder="最小卡路里"
@@ -357,12 +353,14 @@ export default function RecommendationScreen() {
             <Text style={styles.caloriesLabel}>最大值</Text>
             <TextInput
               style={styles.input}
-              value={String(localPreferences.calories_max)}
+              value={String(preferences?.calories_max || 2500)}
               onChangeText={(value) =>
-                setLocalPreferences((prev) => ({
-                  ...prev,
-                  calories_max: parseInt(value) || 0,
-                }))
+                usePreferencesStore.setState({
+                  preferences: {
+                    ...preferences!,
+                    calories_max: parseInt(value) || 0,
+                  },
+                })
               }
               keyboardType="numeric"
               placeholder="最大卡路里"
@@ -375,37 +373,41 @@ export default function RecommendationScreen() {
         <Text style={styles.sectionTitle}>最大烹饪时间（分钟）</Text>
         <TextInput
           style={styles.input}
-          value={String(localPreferences.max_cooking_time)}
+          value={String(preferences?.max_cooking_time || 45)}
           onChangeText={(value) =>
-            setLocalPreferences((prev) => ({
-              ...prev,
-              max_cooking_time: parseInt(value) || 0,
-            }))
+            usePreferencesStore.setState({
+              preferences: {
+                ...preferences!,
+                max_cooking_time: parseInt(value) || 0,
+              },
+            })
           }
           keyboardType="numeric"
           placeholder="最大烹饪时间"
         />
       </View>
 
-      <TouchableOpacity
-        style={styles.startButton}
-        onPress={handleStartRecommendation}
-      >
-        <Text style={styles.startButtonText}>开始推荐</Text>
-      </TouchableOpacity>
+      <View style={styles.bottomContainer}>
+        <TouchableOpacity
+          style={styles.startButton}
+          onPress={handleStartRecommendation}
+        >
+          <Text style={styles.startButtonText}>开始推荐</Text>
+        </TouchableOpacity>
+      </View>
     </ScrollView>
   );
 
   const handleSkipRecommendation = () => {
-    if (!localPreferences) return;
+    if (!preferences) return;
     fetchRecommendation(
-      localPreferences,
+      preferences,
       currentRecommendation ? [currentRecommendation.name] : undefined
     );
   };
 
   const handleAddToRecipe = async () => {
-    if (!currentRecommendation) return;
+    if (!currentRecommendation || !preferences) return;
 
     try {
       const recipeData: Partial<DBRecipe> = {
@@ -413,27 +415,25 @@ export default function RecommendationScreen() {
         description: `${currentRecommendation.cuisine_type.join(
           '/'
         )} - ${currentRecommendation.diet_type.join('/')}`,
-        difficulty: 'medium',
         cooking_time: currentRecommendation.cooking_time,
         calories: currentRecommendation.calories,
-        servings: 2,
         nutrition_facts: {
           ...currentRecommendation.nutrition_facts,
           fiber: currentRecommendation.nutrition_facts.fiber || 0,
         },
         ingredients: currentRecommendation.ingredients.map((ing) => ({
           ...ing,
-          category: '主料',
         })),
         steps: currentRecommendation.steps.map((step, index) => ({
           order: index + 1,
           description: step,
           image_url: undefined,
         })),
-        images: [],
+        cuisine_type: currentRecommendation.cuisine_type,
+        diet_type: currentRecommendation.diet_type,
       };
 
-      await saveRecipe(recipeData, localPreferences);
+      await saveRecipe(recipeData, preferences);
       Alert.alert('成功', '已添加到我的食谱');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '保存食谱失败';
@@ -443,10 +443,10 @@ export default function RecommendationScreen() {
   };
 
   const handleReplace = async () => {
-    if (!currentRecommendation) return;
+    if (!currentRecommendation || !preferences) return;
 
     try {
-      await fetchRecommendation(localPreferences, [currentRecommendation.name]);
+      await fetchRecommendation(preferences, [currentRecommendation.name]);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '获取推荐失败';
       console.error('获取推荐失败:', errorMessage);
@@ -455,7 +455,7 @@ export default function RecommendationScreen() {
   };
 
   const handleApplyDailyRecommendation = async () => {
-    if (!dailyRecommendation) return;
+    if (!dailyRecommendation || !preferences) return;
 
     try {
       await Promise.all(
@@ -465,26 +465,22 @@ export default function RecommendationScreen() {
             description: `${recipe.cuisine_type.join(
               '/'
             )} - ${recipe.diet_type.join('/')}`,
-            difficulty: 'medium',
             cooking_time: recipe.cooking_time,
             calories: recipe.calories,
-            servings: 2,
             nutrition_facts: {
               ...recipe.nutrition_facts,
               fiber: recipe.nutrition_facts.fiber || 0,
             },
             ingredients: recipe.ingredients.map((ing) => ({
               ...ing,
-              category: '主料',
             })),
             steps: recipe.steps.map((step, index) => ({
               order: index + 1,
               description: step,
               image_url: undefined,
             })),
-            images: [],
           };
-          return saveRecipe(recipeData, localPreferences);
+          return saveRecipe(recipeData, preferences);
         })
       );
       Alert.alert('成功', '已添加所有推荐到我的食谱');
@@ -502,9 +498,9 @@ export default function RecommendationScreen() {
           <TouchableOpacity
             style={styles.retryButton}
             onPress={() => {
-              if (!localPreferences) return;
-              fetchRecommendation(localPreferences);
-              fetchDailyRecommendation(localPreferences);
+              if (!preferences) return;
+              fetchRecommendation(preferences);
+              fetchDailyRecommendation(preferences);
             }}
           >
             <Text style={styles.retryButtonText}>重试</Text>
@@ -526,8 +522,8 @@ export default function RecommendationScreen() {
           <TouchableOpacity
             style={styles.retryButton}
             onPress={() => {
-              if (!localPreferences) return;
-              fetchRecommendation(localPreferences);
+              if (!preferences) return;
+              fetchRecommendation(preferences);
             }}
           >
             <Text style={styles.retryButtonText}>重试</Text>
@@ -635,8 +631,8 @@ export default function RecommendationScreen() {
           <TouchableOpacity
             style={styles.retryButton}
             onPress={() => {
-              if (!localPreferences) return;
-              fetchDailyRecommendation(localPreferences);
+              if (!preferences) return;
+              fetchDailyRecommendation(preferences);
             }}
           >
             <Text style={styles.retryButtonText}>重试</Text>
@@ -725,12 +721,20 @@ export default function RecommendationScreen() {
           ))}
         </View>
 
-        <TouchableOpacity
-          style={styles.applyDailyButton}
-          onPress={handleApplyDailyRecommendation}
-        >
-          <Text style={styles.applyButtonText}>应用今日推荐</Text>
-        </TouchableOpacity>
+        <View style={styles.applyDailyButton}>
+          <TouchableOpacity
+            style={styles.applyButton}
+            onPress={handleApplyDailyRecommendation}
+          >
+            <Text style={styles.applyButtonText}>应用今日推荐</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.modifyPreferencesButton}
+            onPress={() => setShowPreferences(true)}
+          >
+            <Text style={styles.modifyPreferencesText}>修改偏好设置</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   };
@@ -739,7 +743,194 @@ export default function RecommendationScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.content}>
         {showPreferences ? (
-          renderPreferencesForm()
+          <View style={styles.preferencesWrapper}>
+            <ScrollView style={styles.preferencesContainer}>
+              <Text style={styles.preferencesTitle}>设置偏好</Text>
+
+              <View style={styles.formSection}>
+                <Text style={styles.sectionTitle}>饮食类型</Text>
+                <View style={styles.chipContainer}>
+                  {DIET_TYPE_OPTIONS.map((type) => (
+                    <TouchableOpacity
+                      key={type}
+                      style={[
+                        styles.chip,
+                        preferences?.diet_type.includes(type as DietType) &&
+                          styles.chipActive,
+                      ]}
+                      onPress={() => {
+                        if (!preferences) return;
+                        const currentValue = preferences.diet_type;
+                        usePreferencesStore.setState({
+                          preferences: {
+                            ...preferences,
+                            diet_type: currentValue.includes(type as DietType)
+                              ? currentValue.filter((t) => t !== type)
+                              : [...currentValue, type as DietType],
+                          },
+                        });
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.chipText,
+                          preferences?.diet_type.includes(type as DietType) &&
+                            styles.chipTextActive,
+                        ]}
+                      >
+                        {type}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.formSection}>
+                <Text style={styles.sectionTitle}>菜系偏好</Text>
+                <View style={styles.chipContainer}>
+                  {CUISINE_TYPE_OPTIONS.map((type) => (
+                    <TouchableOpacity
+                      key={type}
+                      style={[
+                        styles.chip,
+                        preferences?.cuisine_type.includes(type) &&
+                          styles.chipActive,
+                      ]}
+                      onPress={() => {
+                        if (!preferences) return;
+                        const currentValue = preferences.cuisine_type;
+                        usePreferencesStore.setState({
+                          preferences: {
+                            ...preferences,
+                            cuisine_type: currentValue.includes(type)
+                              ? currentValue.filter((t) => t !== type)
+                              : [...currentValue, type],
+                          },
+                        });
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.chipText,
+                          preferences?.cuisine_type.includes(type) &&
+                            styles.chipTextActive,
+                        ]}
+                      >
+                        {type}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.formSection}>
+                <Text style={styles.sectionTitle}>过敏原</Text>
+                <View style={styles.chipContainer}>
+                  {ALLERGY_OPTIONS.map((type) => (
+                    <TouchableOpacity
+                      key={type}
+                      style={[
+                        styles.chip,
+                        preferences?.allergies.includes(type) &&
+                          styles.chipActive,
+                      ]}
+                      onPress={() => {
+                        if (!preferences) return;
+                        const currentValue = preferences.allergies;
+                        usePreferencesStore.setState({
+                          preferences: {
+                            ...preferences,
+                            allergies: currentValue.includes(type)
+                              ? currentValue.filter((t) => t !== type)
+                              : [...currentValue, type],
+                          },
+                        });
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.chipText,
+                          preferences?.allergies.includes(type) &&
+                            styles.chipTextActive,
+                        ]}
+                      >
+                        {type}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.formSection}>
+                <Text style={styles.sectionTitle}>卡路里范围</Text>
+                <View style={styles.caloriesInputContainer}>
+                  <View style={styles.caloriesInput}>
+                    <Text style={styles.caloriesLabel}>最小值</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={String(preferences?.calories_min || 1500)}
+                      onChangeText={(value) =>
+                        usePreferencesStore.setState({
+                          preferences: {
+                            ...preferences!,
+                            calories_min: parseInt(value) || 0,
+                          },
+                        })
+                      }
+                      keyboardType="numeric"
+                      placeholder="最小卡路里"
+                    />
+                  </View>
+                  <View style={styles.caloriesInput}>
+                    <Text style={styles.caloriesLabel}>最大值</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={String(preferences?.calories_max || 2500)}
+                      onChangeText={(value) =>
+                        usePreferencesStore.setState({
+                          preferences: {
+                            ...preferences!,
+                            calories_max: parseInt(value) || 0,
+                          },
+                        })
+                      }
+                      keyboardType="numeric"
+                      placeholder="最大卡路里"
+                    />
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.formSection}>
+                <Text style={styles.sectionTitle}>最大烹饪时间（分钟）</Text>
+                <TextInput
+                  style={styles.input}
+                  value={String(preferences?.max_cooking_time || 45)}
+                  onChangeText={(value) =>
+                    usePreferencesStore.setState({
+                      preferences: {
+                        ...preferences!,
+                        max_cooking_time: parseInt(value) || 0,
+                      },
+                    })
+                  }
+                  keyboardType="numeric"
+                  placeholder="最大烹饪时间"
+                />
+              </View>
+
+              <View style={{ height: 80 }} />
+            </ScrollView>
+
+            <View style={styles.fixedBottomContainer}>
+              <TouchableOpacity
+                style={styles.startButton}
+                onPress={handleStartRecommendation}
+              >
+                <Text style={styles.startButtonText}>开始推荐</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         ) : (
           <ScrollView
             style={styles.recommendationsContainer}
@@ -777,6 +968,9 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background,
   },
   content: {
+    flex: 1,
+  },
+  preferencesWrapper: {
     flex: 1,
   },
   preferencesContainer: {
@@ -834,7 +1028,6 @@ const styles = StyleSheet.create({
     padding: theme.spacing.md,
     borderRadius: theme.spacing.sm,
     alignItems: 'center',
-    marginTop: theme.spacing.xl,
   },
   startButtonText: {
     color: theme.colors.background,
@@ -1045,11 +1238,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   applyDailyButton: {
+    marginTop: theme.spacing.md,
+    gap: theme.spacing.sm,
+  },
+  applyButton: {
     backgroundColor: theme.colors.primary,
     padding: theme.spacing.md,
     borderRadius: theme.spacing.sm,
     alignItems: 'center',
-    marginTop: theme.spacing.md,
+    width: '100%',
   },
   applyButtonText: {
     ...theme.typography.body,
@@ -1070,5 +1267,37 @@ const styles = StyleSheet.create({
   recommendationsContainer: {
     flex: 1,
     paddingHorizontal: theme.spacing.md,
+  },
+  bottomContainer: {
+    padding: theme.spacing.md,
+    paddingBottom: theme.spacing.lg,
+    backgroundColor: theme.colors.background,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.surface,
+  },
+  fixedBottomContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: theme.colors.background,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.surface,
+    padding: theme.spacing.md,
+    paddingBottom: theme.spacing.lg,
+  },
+  modifyPreferencesButton: {
+    backgroundColor: 'transparent',
+    padding: theme.spacing.md,
+    borderRadius: theme.spacing.sm,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    width: '100%',
+  },
+  modifyPreferencesText: {
+    ...theme.typography.body,
+    color: theme.colors.primary,
+    fontWeight: 'bold',
   },
 });

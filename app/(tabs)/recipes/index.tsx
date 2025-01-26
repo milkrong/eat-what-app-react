@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import { FontAwesome } from '@expo/vector-icons';
 import { theme } from '../../../src/theme';
 import type { Recipe } from '../../../src/types/recipe';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { useRecipeStore } from '@/stores/useRecipeStore';
 
 // 分类数据
 const categories = [
@@ -30,104 +31,90 @@ const categories = [
 ];
 
 const { width } = Dimensions.get('window');
-const CARD_MARGIN = theme.spacing.sm;
+const CARD_MARGIN = theme.spacing.md;
 const CARD_WIDTH = (width - theme.spacing.md * 2 - CARD_MARGIN) / 2;
 
-export default function RecipesScreen() {
+export default function RecipeListScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [recipes, setRecipes] = useState<Recipe[]>([]);
-  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const { recipes, loading, error, fetchRecipes, favorites, fetchFavorites } =
+    useRecipeStore();
   const { session } = useAuthStore();
 
-  const fetchRecipes = async (pageNum: number, refresh = false) => {
+  useEffect(() => {
     if (!session?.access_token) return;
-
-    try {
-      const response = await fetch(
-        `${process.env.EXPO_PUBLIC_API_URL}/recipes?page=${pageNum}&category=${selectedCategory}&search=${searchQuery}`,
-        {
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        }
-      );
-
-      if (!response.ok) throw new Error('获取食谱失败');
-
-      const data = await response.json();
-      console.log('data', data);
-      const newRecipes = data;
-      setHasMore(data.has_more);
-      console.log('newRecipes', newRecipes);
-      if (refresh) {
-        setRecipes(newRecipes);
-      } else {
-        setRecipes((prev) => [...prev, ...newRecipes]);
-      }
-    } catch (error) {
-      console.error('获取食谱失败:', error);
-    }
-  };
+    setPage(1);
+    setHasMore(true);
+    fetchRecipes(1, selectedCategory, searchQuery);
+  }, [session?.access_token, selectedCategory, searchQuery]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    setPage(1);
-    await fetchRecipes(1, true);
-    setRefreshing(false);
+    try {
+      setPage(1);
+      setHasMore(true);
+      await Promise.all([
+        fetchRecipes(1, selectedCategory, searchQuery),
+        fetchFavorites(),
+      ]);
+    } finally {
+      setRefreshing(false);
+    }
   }, [selectedCategory, searchQuery]);
 
   const onEndReached = async () => {
-    if (!loading && hasMore) {
-      setLoading(true);
+    if (!loading && hasMore && recipes.length >= 10) {
       const nextPage = page + 1;
-      await fetchRecipes(nextPage);
+      const newRecipes = await fetchRecipes(
+        nextPage,
+        selectedCategory,
+        searchQuery
+      );
+      if (newRecipes?.length < 10) {
+        setHasMore(false);
+      }
       setPage(nextPage);
-      setLoading(false);
     }
   };
 
-  React.useEffect(() => {
-    onRefresh();
-  }, [selectedCategory, searchQuery]);
+  const renderRecipeCard = ({ item }: { item: Recipe }) => {
+    const isFavorite = favorites.some((fav) => fav.id === item.id);
 
-  const renderRecipeCard = ({ item }: { item: Recipe }) => (
-    <TouchableOpacity
-      style={styles.card}
-      onPress={() => router.push(`/recipes/${item.id}`)}
-    >
-      <View style={styles.imageContainer}>
-        {item.images && item.images.length > 0 ? (
-          <Image source={{ uri: item.images[0] }} style={styles.image} />
-        ) : (
-          <View style={styles.imagePlaceholder} />
-        )}
-        <TouchableOpacity
-          style={styles.favoriteButton}
-          onPress={() => {
-            // TODO: 实现收藏功能
-          }}
-        >
-          <FontAwesome name="heart-o" size={20} color={theme.colors.text} />
-        </TouchableOpacity>
-      </View>
-      <View style={styles.cardContent}>
-        <Text style={styles.cardTitle} numberOfLines={1}>
-          {item.name}
-        </Text>
-        <Text style={styles.cardDescription} numberOfLines={2}>
-          {item.description}
-        </Text>
-        <View style={styles.cardMetrics}>
-          <Text style={styles.metricText}>{item.cooking_time}分钟</Text>
-          <Text style={styles.metricText}>{item.calories}千卡</Text>
+    return (
+      <TouchableOpacity
+        style={styles.recipeCard}
+        onPress={() => router.navigate(`/recipes/${item.id}` as any)}
+      >
+        <Image
+          source={{ uri: item.image_url || 'https://via.placeholder.com/300' }}
+          style={styles.recipeImage}
+        />
+        <View style={styles.recipeInfo}>
+          <Text style={styles.recipeName}>{item.name}</Text>
+          <View style={styles.recipeMetrics}>
+            <View style={styles.metricItem}>
+              <FontAwesome
+                name="clock-o"
+                size={16}
+                color={theme.colors.textSecondary}
+              />
+              <Text style={styles.metricText}>{item.cooking_time}分钟</Text>
+            </View>
+            {isFavorite && (
+              <FontAwesome
+                name="heart"
+                size={16}
+                color={theme.colors.primary}
+              />
+            )}
+          </View>
         </View>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -315,5 +302,40 @@ const styles = StyleSheet.create({
   },
   loader: {
     marginVertical: theme.spacing.md,
+  },
+  recipeCard: {
+    width: CARD_WIDTH,
+    backgroundColor: theme.colors.background,
+    borderRadius: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
+    marginRight: CARD_MARGIN,
+    overflow: 'hidden',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  recipeImage: {
+    width: '100%',
+    height: CARD_WIDTH,
+  },
+  recipeInfo: {
+    padding: theme.spacing.sm,
+  },
+  recipeName: {
+    ...theme.typography.body,
+    color: theme.colors.text,
+    marginBottom: theme.spacing.xs,
+  },
+  recipeMetrics: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  metricItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
   },
 });

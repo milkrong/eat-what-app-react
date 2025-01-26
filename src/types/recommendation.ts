@@ -1,7 +1,7 @@
 import type { Recipe as RecipeType } from './recipe';
-import type { MealType } from './meal';
+import type { MealType } from './meal-plan';
 
-export type DietType = 'regular' | 'vegetarian' | 'vegan' | 'keto' | 'paleo';
+export type DietType = string;
 
 export interface DietaryPreferences {
   diet_type: DietType[];

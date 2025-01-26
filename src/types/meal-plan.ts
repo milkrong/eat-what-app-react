@@ -5,28 +5,13 @@ export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 export interface MealPlan {
   id: string;
   date: string;
-  mealType: MealType;
+  meal_type: MealType;
   recipe: Recipe;
   portions: number;
   notes?: string;
 }
 
-export interface DailyNutrition {
-  calories: number;
-  protein: number;
-  carbs: number;
-  fat: number;
-  fiber: number;
-}
-
-export interface DailyMealPlan {
-  date: string;
-  breakfast: MealPlan[];
-  lunch: MealPlan[];
-  dinner: MealPlan[];
-  snack: MealPlan[];
-  nutrition: DailyNutrition;
-}
+export type DailyMealPlan = Record<MealType, MealPlan[]>;
 
 export const MEAL_TYPE_CONFIG = {
   breakfast: {

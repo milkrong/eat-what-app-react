@@ -8,51 +8,223 @@ import {
   TouchableOpacity,
   Dimensions,
   Animated,
+  Modal,
+  Alert,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
 import { FontAwesome } from '@expo/vector-icons';
 import { theme } from '../../src/theme';
-import type { Recipe } from '../../src/types/recipe';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { useRecipeStore } from '@/stores/useRecipeStore';
+
+interface Ingredient {
+  name: string;
+  amount: number;
+  unit: string;
+}
+
+interface Step {
+  order: number;
+  description: string;
+  image_url?: string;
+}
+
+interface NutritionFacts {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+}
+
+interface Recipe {
+  id: string;
+  name: string;
+  description: string;
+  cooking_time: number;
+  difficulty: string;
+  servings: number;
+  calories: number;
+  nutrition_facts: NutritionFacts;
+  ingredients: Ingredient[];
+  steps: Step[];
+  images: string[];
+  is_favorite?: boolean;
+}
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const IMAGE_HEIGHT = SCREEN_WIDTH * 0.75;
 
-export default function RecipeDetailScreen() {
-  const { id } = useLocalSearchParams();
-  const [recipe, setRecipe] = useState<Recipe | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isFavorite, setIsFavorite] = useState(false);
-  const scrollY = new Animated.Value(0);
-  const { session } = useAuthStore();
+const RecipeDetailSkeleton = () => (
+  <View style={styles.container}>
+    <View style={styles.imageContainer}>
+      <SkeletonLoader width={SCREEN_WIDTH} height={IMAGE_HEIGHT} />
+    </View>
+    <View style={[styles.content, { paddingHorizontal: theme.spacing.md }]}>
+      <View style={styles.header}>
+        <SkeletonLoader
+          width={200}
+          height={32}
+          style={{ marginBottom: theme.spacing.sm }}
+        />
+        <SkeletonLoader
+          width={SCREEN_WIDTH - theme.spacing.md * 2}
+          height={48}
+          style={{ marginBottom: theme.spacing.md }}
+        />
+        <View style={styles.metrics}>
+          <SkeletonLoader width={80} height={24} />
+          <SkeletonLoader width={80} height={24} />
+          <SkeletonLoader width={80} height={24} />
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <SkeletonLoader
+          width={120}
+          height={24}
+          style={{ marginBottom: theme.spacing.md }}
+        />
+        <View style={styles.nutritionGrid}>
+          {[1, 2, 3, 4].map((i) => (
+            <View key={i} style={styles.nutritionItem}>
+              <SkeletonLoader
+                width={60}
+                height={32}
+                style={{ marginBottom: theme.spacing.xs }}
+              />
+              <SkeletonLoader width={40} height={16} />
+            </View>
+          ))}
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <SkeletonLoader
+          width={120}
+          height={24}
+          style={{ marginBottom: theme.spacing.md }}
+        />
+        {[1, 2, 3, 4].map((i) => (
+          <View key={i} style={styles.ingredientItem}>
+            <SkeletonLoader width={120} height={20} />
+            <SkeletonLoader width={80} height={20} />
+          </View>
+        ))}
+      </View>
+
+      <View style={styles.section}>
+        <SkeletonLoader
+          width={120}
+          height={24}
+          style={{ marginBottom: theme.spacing.md }}
+        />
+        {[1, 2, 3].map((i) => (
+          <View key={i} style={styles.stepItem}>
+            <View style={styles.stepHeader}>
+              <SkeletonLoader
+                width={24}
+                height={24}
+                style={{ borderRadius: 12, marginRight: theme.spacing.sm }}
+              />
+              <SkeletonLoader
+                width={SCREEN_WIDTH - theme.spacing.md * 4 - 24}
+                height={48}
+              />
+            </View>
+          </View>
+        ))}
+      </View>
+    </View>
+  </View>
+);
+
+const SkeletonLoader = ({
+  width,
+  height,
+  style,
+}: {
+  width: number;
+  height: number;
+  style?: any;
+}) => {
+  const animatedValue = React.useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
-    const fetchRecipe = async () => {
-      if (!session?.access_token) return;
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(animatedValue, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(animatedValue, {
+          toValue: 0,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, []);
 
-      try {
-        const response = await fetch(
-          `${process.env.EXPO_PUBLIC_API_URL}/recipes/${id}`,
-          {
-            headers: {
-              Authorization: `Bearer ${session.access_token}`,
-            },
-          }
-        );
-        if (!response.ok) throw new Error('获取食谱失败');
-        const data = await response.json();
-        setRecipe(data);
-        setIsFavorite(data.is_favorite || false);
-      } catch (error) {
-        console.error('获取食谱失败:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const opacity = animatedValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.3, 0.7],
+  });
 
-    fetchRecipe();
+  return (
+    <Animated.View
+      style={[
+        {
+          width,
+          height,
+          backgroundColor: theme.colors.surface,
+          borderRadius: theme.spacing.xs,
+          opacity,
+        },
+        style,
+      ]}
+    />
+  );
+};
+
+const MEAL_TYPES = [
+  { id: 'breakfast', name: '早餐' },
+  { id: 'lunch', name: '午餐' },
+  { id: 'dinner', name: '晚餐' },
+];
+
+export default function RecipeDetailScreen() {
+  const { id } = useLocalSearchParams();
+  const scrollY = new Animated.Value(0);
+  const { session } = useAuthStore();
+  const { currentRecipe, loading, error, fetchRecipeById, toggleFavorite } =
+    useRecipeStore();
+  const [showMealPlanModal, setShowMealPlanModal] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedMealType, setSelectedMealType] = useState<string | null>(null);
+  const [dateInput, setDateInput] = useState(() => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  });
+
+  React.useEffect(() => {
+    if (!session?.access_token || !id) return;
+    fetchRecipeById(id as string);
   }, [id, session?.access_token]);
+
+  const handleToggleFavorite = async () => {
+    if (!currentRecipe) return;
+    try {
+      await toggleFavorite(currentRecipe.id);
+    } catch (error) {
+      console.error('收藏失败:', error);
+    }
+  };
 
   const imageTranslateY = scrollY.interpolate({
     inputRange: [-IMAGE_HEIGHT, 0, IMAGE_HEIGHT],
@@ -60,17 +232,13 @@ export default function RecipeDetailScreen() {
     extrapolate: 'clamp',
   });
 
-  const renderIngredientGroup = (category: string) => {
-    if (!recipe) return null;
-    const ingredients = recipe.ingredients.filter(
-      (i) => i.category === category
-    );
-    if (ingredients.length === 0) return null;
+  const renderIngredients = () => {
+    if (!currentRecipe || !currentRecipe.ingredients) return null;
 
     return (
-      <View key={category} style={styles.ingredientGroup}>
-        <Text style={styles.ingredientGroupTitle}>{category}</Text>
-        {ingredients.map((ingredient, index) => (
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>材料清单</Text>
+        {currentRecipe.ingredients.map((ingredient, index) => (
           <View key={index} style={styles.ingredientItem}>
             <Text style={styles.ingredientName}>{ingredient.name}</Text>
             <Text style={styles.ingredientAmount}>
@@ -83,7 +251,7 @@ export default function RecipeDetailScreen() {
     );
   };
 
-  const renderStep = ({ item }: { item: Recipe['steps'][0] }) => (
+  const renderStep = ({ item }: { item: Step }) => (
     <View style={styles.stepItem}>
       <View style={styles.stepHeader}>
         <View style={styles.stepNumber}>
@@ -97,11 +265,124 @@ export default function RecipeDetailScreen() {
     </View>
   );
 
-  if (loading || !recipe) {
+  const handleAddToMealPlan = async () => {
+    if (!selectedMealType || !currentRecipe || !dateInput) return;
+
+    try {
+      const formattedDate = `${dateInput}T12:00:00Z`;
+      const response = await fetch(
+        `${process.env.EXPO_PUBLIC_API_URL}/meal-plans`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session?.access_token}`,
+          },
+          body: JSON.stringify({
+            date: formattedDate,
+            meal_type: selectedMealType,
+            recipe_id: currentRecipe.id,
+          }),
+        }
+      );
+
+      if (!response.ok) throw new Error('添加到餐饮计划失败');
+
+      Alert.alert('成功', '已添加到餐饮计划');
+      setShowMealPlanModal(false);
+      setDateInput('');
+      setSelectedMealType(null);
+    } catch (error) {
+      console.error('添加到餐饮计划失败:', error);
+      Alert.alert('错误', '添加到餐饮计划失败');
+    }
+  };
+
+  const renderMealPlanModal = () => (
+    <Modal
+      visible={showMealPlanModal}
+      transparent
+      animationType="slide"
+      onRequestClose={() => setShowMealPlanModal(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <Text style={styles.modalTitle}>添加到餐饮计划</Text>
+
+          <Text style={styles.modalLabel}>选择日期 (格式: YYYY-MM-DD)</Text>
+          <TextInput
+            style={styles.dateInput}
+            value={dateInput}
+            onChangeText={setDateInput}
+            placeholder="2024-01-01"
+            placeholderTextColor={theme.colors.textSecondary}
+          />
+
+          <Text style={styles.modalLabel}>选择餐点</Text>
+          <View style={styles.mealTypeContainer}>
+            {MEAL_TYPES.map((type) => (
+              <TouchableOpacity
+                key={type.id}
+                style={[
+                  styles.mealTypeButton,
+                  selectedMealType === type.id && styles.mealTypeButtonActive,
+                ]}
+                onPress={() => setSelectedMealType(type.id)}
+              >
+                <Text
+                  style={[
+                    styles.mealTypeText,
+                    selectedMealType === type.id && styles.mealTypeTextActive,
+                  ]}
+                >
+                  {type.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <View style={styles.modalActions}>
+            <TouchableOpacity
+              style={[styles.modalButton, styles.cancelButton]}
+              onPress={() => {
+                setShowMealPlanModal(false);
+                setDateInput('');
+                setSelectedMealType(null);
+              }}
+            >
+              <Text style={styles.cancelButtonText}>取消</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.modalButton, styles.confirmButton]}
+              onPress={handleAddToMealPlan}
+            >
+              <Text style={styles.confirmButtonText}>确认</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  if (loading || !currentRecipe) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>加载中...</Text>
+        <RecipeDetailSkeleton />
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.content}>
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={() => fetchRecipeById(id as string)}
+          >
+            <Text style={styles.retryButtonText}>重试</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
@@ -128,13 +409,30 @@ export default function RecipeDetailScreen() {
           headerRight: () => (
             <View style={styles.headerButtons}>
               <TouchableOpacity
-                style={styles.headerButton}
-                onPress={() => setIsFavorite(!isFavorite)}
+                style={[styles.headerButton]}
+                onPress={() => setShowMealPlanModal(true)}
               >
                 <FontAwesome
-                  name={isFavorite ? 'heart' : 'heart-o'}
+                  name="calendar-plus-o"
                   size={20}
                   color={theme.colors.background}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.headerButton,
+                  currentRecipe?.is_favorite && styles.headerButtonActive,
+                ]}
+                onPress={handleToggleFavorite}
+              >
+                <FontAwesome
+                  name={currentRecipe?.is_favorite ? 'heart' : 'heart-o'}
+                  size={20}
+                  color={
+                    currentRecipe?.is_favorite
+                      ? theme.colors.primary
+                      : theme.colors.background
+                  }
                 />
               </TouchableOpacity>
               <TouchableOpacity style={styles.headerButton}>
@@ -164,8 +462,11 @@ export default function RecipeDetailScreen() {
               { transform: [{ translateY: imageTranslateY }] },
             ]}
           >
-            {recipe.images?.[0] ? (
-              <Image source={{ uri: recipe.images[0] }} style={styles.image} />
+            {currentRecipe.image_url ? (
+              <Image
+                source={{ uri: currentRecipe.image_url }}
+                style={styles.image}
+              />
             ) : (
               <View style={styles.imagePlaceholder} />
             )}
@@ -175,8 +476,8 @@ export default function RecipeDetailScreen() {
         <View style={styles.content}>
           {/* 基本信息 */}
           <View style={styles.header}>
-            <Text style={styles.title}>{recipe.name}</Text>
-            <Text style={styles.description}>{recipe.description}</Text>
+            <Text style={styles.title}>{currentRecipe.name}</Text>
+            <Text style={styles.description}>{currentRecipe.description}</Text>
             <View style={styles.metrics}>
               <View style={styles.metricItem}>
                 <FontAwesome
@@ -185,26 +486,21 @@ export default function RecipeDetailScreen() {
                   color={theme.colors.primary}
                 />
                 <Text style={styles.metricValue}>
-                  {recipe.cooking_time}分钟
+                  {currentRecipe.cooking_time}分钟
                 </Text>
               </View>
-              <View style={styles.metricItem}>
-                <FontAwesome
-                  name="signal"
-                  size={20}
-                  color={theme.colors.primary}
-                />
-                <Text style={styles.metricValue}>{recipe.difficulty}</Text>
-              </View>
-              <View style={styles.metricItem}>
-                <FontAwesome
-                  name="users"
-                  size={20}
-                  color={theme.colors.primary}
-                />
-                <Text style={styles.metricValue}>{recipe.servings}人份</Text>
-              </View>
             </View>
+            <TouchableOpacity
+              style={styles.addToMealPlanButton}
+              onPress={() => setShowMealPlanModal(true)}
+            >
+              <FontAwesome
+                name="calendar-plus-o"
+                size={20}
+                color={theme.colors.background}
+              />
+              <Text style={styles.addToMealPlanText}>添加到餐饮计划</Text>
+            </TouchableOpacity>
           </View>
 
           {/* 营养成分 */}
@@ -212,47 +508,49 @@ export default function RecipeDetailScreen() {
             <Text style={styles.sectionTitle}>营养成分</Text>
             <View style={styles.nutritionGrid}>
               <View style={styles.nutritionItem}>
-                <Text style={styles.nutritionValue}>{recipe.calories}</Text>
+                <Text style={styles.nutritionValue}>
+                  {currentRecipe.calories}
+                </Text>
                 <Text style={styles.nutritionLabel}>卡路里</Text>
               </View>
-              <View style={styles.nutritionItem}>
-                <Text style={styles.nutritionValue}>
-                  {recipe.nutrition_facts.protein}g
-                </Text>
-                <Text style={styles.nutritionLabel}>蛋白质</Text>
-              </View>
-              <View style={styles.nutritionItem}>
-                <Text style={styles.nutritionValue}>
-                  {recipe.nutrition_facts.carbs}g
-                </Text>
-                <Text style={styles.nutritionLabel}>碳水</Text>
-              </View>
-              <View style={styles.nutritionItem}>
-                <Text style={styles.nutritionValue}>
-                  {recipe.nutrition_facts.fat}g
-                </Text>
-                <Text style={styles.nutritionLabel}>脂肪</Text>
-              </View>
+              {currentRecipe.nutrition_facts && (
+                <>
+                  <View style={styles.nutritionItem}>
+                    <Text style={styles.nutritionValue}>
+                      {currentRecipe.nutrition_facts.protein}g
+                    </Text>
+                    <Text style={styles.nutritionLabel}>蛋白质</Text>
+                  </View>
+                  <View style={styles.nutritionItem}>
+                    <Text style={styles.nutritionValue}>
+                      {currentRecipe.nutrition_facts.carbs}g
+                    </Text>
+                    <Text style={styles.nutritionLabel}>碳水</Text>
+                  </View>
+                  <View style={styles.nutritionItem}>
+                    <Text style={styles.nutritionValue}>
+                      {currentRecipe.nutrition_facts.fat}g
+                    </Text>
+                    <Text style={styles.nutritionLabel}>脂肪</Text>
+                  </View>
+                </>
+              )}
             </View>
           </View>
 
           {/* 材料清单 */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>材料清单</Text>
-            {['主料', '辅料', '调味料'].map((category) =>
-              renderIngredientGroup(category)
-            )}
-          </View>
+          {renderIngredients()}
 
           {/* 步骤说明 */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>步骤说明</Text>
-            {recipe.steps.map((step) => (
+            {currentRecipe.steps?.map((step) => (
               <View key={step.order}>{renderStep({ item: step })}</View>
             ))}
           </View>
         </View>
       </Animated.ScrollView>
+      {renderMealPlanModal()}
     </SafeAreaView>
   );
 }
@@ -272,9 +570,16 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
   },
   headerButton: {
-    padding: 8,
+    width: 40,
+    height: 40,
     borderRadius: 20,
-    marginHorizontal: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 4,
+  },
+  headerButtonActive: {
+    backgroundColor: theme.colors.background,
   },
   backButton: {
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
@@ -420,5 +725,115 @@ const styles = StyleSheet.create({
     height: 200,
     borderRadius: theme.spacing.sm,
     marginTop: theme.spacing.sm,
+  },
+  errorText: {
+    ...theme.typography.body,
+    color: theme.colors.error,
+    marginBottom: theme.spacing.md,
+  },
+  retryButton: {
+    padding: 12,
+    borderRadius: 20,
+    backgroundColor: theme.colors.primary,
+    alignItems: 'center',
+  },
+  retryButtonText: {
+    ...theme.typography.body,
+    color: theme.colors.background,
+    fontWeight: 'bold',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: theme.colors.background,
+    borderTopLeftRadius: theme.spacing.lg,
+    borderTopRightRadius: theme.spacing.lg,
+    padding: theme.spacing.lg,
+  },
+  modalTitle: {
+    ...theme.typography.h2,
+    color: theme.colors.text,
+    marginBottom: theme.spacing.lg,
+    textAlign: 'center',
+  },
+  modalLabel: {
+    ...theme.typography.body,
+    color: theme.colors.text,
+    marginBottom: theme.spacing.sm,
+  },
+  mealTypeContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: theme.spacing.lg,
+  },
+  mealTypeButton: {
+    flex: 1,
+    padding: theme.spacing.sm,
+    borderRadius: theme.spacing.sm,
+    backgroundColor: theme.colors.surface,
+    marginHorizontal: theme.spacing.xs,
+    alignItems: 'center',
+  },
+  mealTypeButtonActive: {
+    backgroundColor: theme.colors.primary,
+  },
+  mealTypeText: {
+    ...theme.typography.body,
+    color: theme.colors.text,
+  },
+  mealTypeTextActive: {
+    color: theme.colors.background,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: theme.spacing.lg,
+  },
+  modalButton: {
+    flex: 1,
+    padding: theme.spacing.sm,
+    borderRadius: theme.spacing.sm,
+    marginHorizontal: theme.spacing.xs,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: theme.colors.surface,
+  },
+  confirmButton: {
+    backgroundColor: theme.colors.primary,
+  },
+  cancelButtonText: {
+    ...theme.typography.body,
+    color: theme.colors.text,
+  },
+  confirmButtonText: {
+    ...theme.typography.body,
+    color: theme.colors.background,
+  },
+  addToMealPlanButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.primary,
+    padding: theme.spacing.sm,
+    borderRadius: theme.spacing.sm,
+    marginTop: theme.spacing.md,
+    gap: theme.spacing.sm,
+  },
+  addToMealPlanText: {
+    ...theme.typography.body,
+    color: theme.colors.background,
+    fontWeight: 'bold',
+  },
+  dateInput: {
+    backgroundColor: theme.colors.surface,
+    padding: theme.spacing.sm,
+    borderRadius: theme.spacing.sm,
+    color: theme.colors.text,
+    marginBottom: theme.spacing.md,
+    fontSize: 16,
   },
 });

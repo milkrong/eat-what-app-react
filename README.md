@@ -14,6 +14,7 @@
 - **测试**: Jest & React Native Testing Library
 
 ## 应用架构
+## No
 
 ### 目录结构
 

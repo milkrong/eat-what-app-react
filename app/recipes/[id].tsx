@@ -462,11 +462,8 @@ export default function RecipeDetailScreen() {
               { transform: [{ translateY: imageTranslateY }] },
             ]}
           >
-            {currentRecipe.image_url ? (
-              <Image
-                source={{ uri: currentRecipe.image_url }}
-                style={styles.image}
-              />
+            {currentRecipe.img ? (
+              <Image source={{ uri: currentRecipe.img }} style={styles.image} />
             ) : (
               <View style={styles.imagePlaceholder} />
             )}

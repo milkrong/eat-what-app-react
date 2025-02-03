@@ -25,6 +25,7 @@ interface RecipeState {
   ) => Promise<void>;
   setCurrentRecipe: (recipe: Recipe | null) => void;
   toggleFavorite: (recipeId: string) => Promise<void>;
+  deleteRecipes: (recipeIds: string[]) => Promise<void>;
 }
 
 // 获取认证头
@@ -192,6 +193,39 @@ const useRecipeStore = create<RecipeState>((set) => ({
         error: error instanceof Error ? error.message : '收藏失败',
       });
       throw error;
+    }
+  },
+
+  deleteRecipes: async (recipeIds: string[]) => {
+    const { session } = useAuthStore.getState();
+    if (!session?.access_token) return;
+
+    set({ loading: true, error: null });
+    try {
+      await Promise.all(
+        recipeIds.map((id) =>
+          fetch(`${API_URL}/recipe/${id}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders(),
+          })
+        )
+      );
+
+      set((state) => ({
+        recipes: state.recipes.filter(
+          (recipe) => !recipeIds.includes(recipe.id)
+        ),
+        favorites: state.favorites.filter(
+          (recipe) => !recipeIds.includes(recipe.id)
+        ),
+      }));
+    } catch (error) {
+      set({
+        error: error instanceof Error ? error.message : '删除食谱失败',
+      });
+      throw error;
+    } finally {
+      set({ loading: false });
     }
   },
 }));

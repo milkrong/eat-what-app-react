@@ -52,8 +52,11 @@ function SkeletonLoader() {
     outputRange: [0.3, 0.7],
   });
 
-  const renderSkeletonCard = () => (
-    <Animated.View style={[styles.skeletonCard, { opacity }]}>
+  const renderSkeletonCard = (index: number) => (
+    <Animated.View
+      key={'skeleton_card' + index}
+      style={[styles.skeletonCard, { opacity }]}
+    >
       <View style={styles.skeletonContent}>
         <View style={styles.skeletonTitle} />
         <View style={styles.skeletonText} />
@@ -67,7 +70,7 @@ function SkeletonLoader() {
         <View style={styles.skeletonTitle} />
         <View style={styles.nutritionGrid}>
           {[...Array(4)].map((_, i) => (
-            <View key={i} style={styles.nutritionItem}>
+            <View key={'skeleton_nutrition' + i} style={styles.nutritionItem}>
               <View style={styles.skeletonValue} />
               <View style={styles.skeletonLabel} />
             </View>
@@ -75,9 +78,9 @@ function SkeletonLoader() {
         </View>
       </View>
       {Object.keys(MEAL_TYPE_CONFIG).map((type) => (
-        <View key={type} style={styles.mealSection}>
+        <View key={type + 'skeleton2'} style={styles.mealSection}>
           <View style={styles.skeletonHeader} />
-          {[...Array(2)].map((_, i) => renderSkeletonCard())}
+          {[...Array(2)].map((_, i) => renderSkeletonCard(i))}
         </View>
       ))}
     </View>
@@ -222,8 +225,8 @@ export default function MealPlanScreen() {
   };
 
   // 渲染餐品卡片
-  const renderMealCard = (meal: MealPlan) => (
-    <Animated.View key={meal.id} style={styles.mealCard}>
+  const renderMealCard = (meal: MealPlan, index: number) => (
+    <Animated.View key={index + meal.id} style={styles.mealCard}>
       <View style={styles.mealCardContent}>
         <Text style={styles.mealName}>{meal.recipe.name}</Text>
         <Text style={styles.mealPortions}>{meal.recipe.description}</Text>

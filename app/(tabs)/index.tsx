@@ -213,191 +213,6 @@ export default function RecommendationScreen() {
     }
   };
 
-  const renderPreferencesForm = () => (
-    <ScrollView style={styles.preferencesContainer}>
-      <Text style={styles.preferencesTitle}>设置偏好</Text>
-
-      <View style={styles.formSection}>
-        <Text style={styles.sectionTitle}>饮食类型</Text>
-        <View style={styles.chipContainer}>
-          {DIET_TYPE_OPTIONS.map((type) => (
-            <TouchableOpacity
-              key={type}
-              style={[
-                styles.chip,
-                preferences?.diet_type.includes(type as DietType) &&
-                  styles.chipActive,
-              ]}
-              onPress={() => {
-                if (!preferences) return;
-                const currentValue = preferences.diet_type;
-                usePreferencesStore.setState({
-                  preferences: {
-                    ...preferences,
-                    diet_type: currentValue.includes(type as DietType)
-                      ? currentValue.filter((t) => t !== type)
-                      : [...currentValue, type as DietType],
-                  },
-                });
-              }}
-            >
-              <Text
-                style={[
-                  styles.chipText,
-                  preferences?.diet_type.includes(type as DietType) &&
-                    styles.chipTextActive,
-                ]}
-              >
-                {type}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      <View style={styles.formSection}>
-        <Text style={styles.sectionTitle}>菜系偏好</Text>
-        <View style={styles.chipContainer}>
-          {CUISINE_TYPE_OPTIONS.map((type) => (
-            <TouchableOpacity
-              key={type}
-              style={[
-                styles.chip,
-                preferences?.cuisine_type.includes(type) && styles.chipActive,
-              ]}
-              onPress={() => {
-                if (!preferences) return;
-                const currentValue = preferences.cuisine_type;
-                usePreferencesStore.setState({
-                  preferences: {
-                    ...preferences,
-                    cuisine_type: currentValue.includes(type)
-                      ? currentValue.filter((t) => t !== type)
-                      : [...currentValue, type],
-                  },
-                });
-              }}
-            >
-              <Text
-                style={[
-                  styles.chipText,
-                  preferences?.cuisine_type.includes(type) &&
-                    styles.chipTextActive,
-                ]}
-              >
-                {type}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      <View style={styles.formSection}>
-        <Text style={styles.sectionTitle}>过敏原</Text>
-        <View style={styles.chipContainer}>
-          {ALLERGY_OPTIONS.map((type) => (
-            <TouchableOpacity
-              key={type}
-              style={[
-                styles.chip,
-                preferences?.allergies.includes(type) && styles.chipActive,
-              ]}
-              onPress={() => {
-                if (!preferences) return;
-                const currentValue = preferences.allergies;
-                usePreferencesStore.setState({
-                  preferences: {
-                    ...preferences,
-                    allergies: currentValue.includes(type)
-                      ? currentValue.filter((t) => t !== type)
-                      : [...currentValue, type],
-                  },
-                });
-              }}
-            >
-              <Text
-                style={[
-                  styles.chipText,
-                  preferences?.allergies.includes(type) &&
-                    styles.chipTextActive,
-                ]}
-              >
-                {type}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      <View style={styles.formSection}>
-        <Text style={styles.sectionTitle}>卡路里范围</Text>
-        <View style={styles.caloriesInputContainer}>
-          <View style={styles.caloriesInput}>
-            <Text style={styles.caloriesLabel}>最小值</Text>
-            <TextInput
-              style={styles.input}
-              value={String(preferences?.calories_min || 1500)}
-              onChangeText={(value) =>
-                usePreferencesStore.setState({
-                  preferences: {
-                    ...preferences!,
-                    calories_min: parseInt(value) || 0,
-                  },
-                })
-              }
-              keyboardType="numeric"
-              placeholder="最小卡路里"
-            />
-          </View>
-          <View style={styles.caloriesInput}>
-            <Text style={styles.caloriesLabel}>最大值</Text>
-            <TextInput
-              style={styles.input}
-              value={String(preferences?.calories_max || 2500)}
-              onChangeText={(value) =>
-                usePreferencesStore.setState({
-                  preferences: {
-                    ...preferences!,
-                    calories_max: parseInt(value) || 0,
-                  },
-                })
-              }
-              keyboardType="numeric"
-              placeholder="最大卡路里"
-            />
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.formSection}>
-        <Text style={styles.sectionTitle}>最大烹饪时间（分钟）</Text>
-        <TextInput
-          style={styles.input}
-          value={String(preferences?.max_cooking_time || 45)}
-          onChangeText={(value) =>
-            usePreferencesStore.setState({
-              preferences: {
-                ...preferences!,
-                max_cooking_time: parseInt(value) || 0,
-              },
-            })
-          }
-          keyboardType="numeric"
-          placeholder="最大烹饪时间"
-        />
-      </View>
-
-      <View style={styles.bottomContainer}>
-        <TouchableOpacity
-          style={styles.startButton}
-          onPress={handleStartRecommendation}
-        >
-          <Text style={styles.startButtonText}>开始推荐</Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
-  );
-
   const handleSkipRecommendation = () => {
     if (!preferences) return;
     fetchRecommendation(
@@ -431,6 +246,7 @@ export default function RecommendationScreen() {
         })),
         cuisine_type: currentRecommendation.cuisine_type,
         diet_type: currentRecommendation.diet_type,
+        img: currentRecommendation.img,
       };
 
       await saveRecipe(recipeData, preferences);
@@ -467,6 +283,8 @@ export default function RecommendationScreen() {
             )} - ${recipe.diet_type.join('/')}`,
             cooking_time: recipe.cooking_time,
             calories: recipe.calories,
+            cuisine_type: recipe.cuisine_type,
+            diet_type: recipe.diet_type,
             nutrition_facts: {
               ...recipe.nutrition_facts,
               fiber: recipe.nutrition_facts.fiber || 0,
@@ -479,6 +297,7 @@ export default function RecommendationScreen() {
               description: step,
               image_url: undefined,
             })),
+            img: recipe.img,
           };
           return saveRecipe(recipeData, preferences);
         })
@@ -559,7 +378,7 @@ export default function RecommendationScreen() {
         </LinearGradient>
         <Image
           source={{
-            uri: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg',
+            uri: currentRecommendation.img,
           }}
           style={styles.recommendationImage}
         />
@@ -696,7 +515,9 @@ export default function RecommendationScreen() {
             <View key={`${meal.name}-${index}`} style={styles.mealCard}>
               <Image
                 source={{
-                  uri: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg',
+                  uri:
+                    meal.img ||
+                    'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg',
                 }}
                 style={styles.mealImage}
               />

@@ -38,11 +38,12 @@ const useRecommendationStore = create<RecommendationState>((set) => ({
         body: JSON.stringify({
           preferences,
           excludeRecipes,
-          provider: 'deepseek',
+          provider: 'coze',
         }),
       });
       if (!response.ok) throw new Error('获取推荐失败');
       const data: Recipe = await response.json();
+      console.log(data);
       set({ currentRecommendation: data });
     } catch (error) {
       set({ error: (error as Error).message });
@@ -61,7 +62,7 @@ const useRecommendationStore = create<RecommendationState>((set) => ({
         headers: getAuthHeaders(),
         body: JSON.stringify({
           preferences,
-          provider: 'deepseek',
+          provider: 'coze',
         }),
       });
       if (!response.ok) throw new Error('获取每日推荐失败');

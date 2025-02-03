@@ -104,6 +104,7 @@ export interface Recipe {
   ingredients: Ingredient[];
   nutrition_facts: NutritionFacts;
   steps: string[];
+  img?: string;
 }
 
 export type DailyRecommendation = Recipe[];

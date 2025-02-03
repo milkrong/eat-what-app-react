@@ -9,12 +9,12 @@ export interface Recipe {
   nutrition_facts: NutritionFacts | null;
   cuisine_type: string[] | null;
   diet_type: string[] | null;
-  image_url: string | null;
   created_by: string | null;
   views: number | null;
   created_at: string | null;
   updated_at: string | null;
   is_favorite?: boolean;
+  img?: string;
 }
 
 export interface RecipeFilters {

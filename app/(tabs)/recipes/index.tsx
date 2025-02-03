@@ -11,6 +11,7 @@ import {
   FlatList,
   Dimensions,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -40,8 +41,17 @@ export default function RecipeListScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-  const { recipes, loading, error, fetchRecipes, favorites, fetchFavorites } =
-    useRecipeStore();
+  const [isManageMode, setIsManageMode] = useState(false);
+  const [selectedRecipes, setSelectedRecipes] = useState<string[]>([]);
+  const {
+    recipes,
+    loading,
+    error,
+    fetchRecipes,
+    favorites,
+    fetchFavorites,
+    deleteRecipes,
+  } = useRecipeStore();
   const { session } = useAuthStore();
 
   useEffect(() => {
@@ -80,18 +90,79 @@ export default function RecipeListScreen() {
     }
   };
 
+  const handleDeleteSelected = async () => {
+    if (selectedRecipes.length === 0) return;
+
+    Alert.alert(
+      '确认删除',
+      `确定要删除选中的 ${selectedRecipes.length} 个食谱吗？`,
+      [
+        {
+          text: '取消',
+          style: 'cancel',
+        },
+        {
+          text: '删除',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteRecipes(selectedRecipes);
+              setSelectedRecipes([]);
+              setIsManageMode(false);
+              onRefresh();
+            } catch (error) {
+              Alert.alert('错误', '删除食谱失败');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const toggleRecipeSelection = (recipeId: string) => {
+    setSelectedRecipes((prev) =>
+      prev.includes(recipeId)
+        ? prev.filter((id) => id !== recipeId)
+        : [...prev, recipeId]
+    );
+  };
+
   const renderRecipeCard = ({ item }: { item: Recipe }) => {
     const isFavorite = favorites.some((fav) => fav.id === item.id);
+    const isSelected = selectedRecipes.includes(item.id);
 
     return (
       <TouchableOpacity
         style={styles.recipeCard}
-        onPress={() => router.navigate(`/recipes/${item.id}` as any)}
+        onPress={() => {
+          if (isManageMode) {
+            toggleRecipeSelection(item.id);
+          } else {
+            router.navigate(`/recipes/${item.id}` as any);
+          }
+        }}
       >
-        <Image
-          source={{ uri: item.image_url || 'https://via.placeholder.com/300' }}
-          style={styles.recipeImage}
-        />
+        <View style={styles.imageContainer}>
+          <Image
+            source={{
+              uri: item.img || 'https://via.placeholder.com/300',
+            }}
+            style={styles.recipeImage}
+          />
+          {isManageMode && (
+            <View
+              style={[styles.checkbox, isSelected && styles.checkboxSelected]}
+            >
+              {isSelected && (
+                <FontAwesome
+                  name="check"
+                  size={16}
+                  color={theme.colors.background}
+                />
+              )}
+            </View>
+          )}
+        </View>
         <View style={styles.recipeInfo}>
           <Text style={styles.recipeName}>{item.name}</Text>
           <View style={styles.recipeMetrics}>
@@ -103,7 +174,7 @@ export default function RecipeListScreen() {
               />
               <Text style={styles.metricText}>{item.cooking_time}分钟</Text>
             </View>
-            {isFavorite && (
+            {isFavorite && !isManageMode && (
               <FontAwesome
                 name="heart"
                 size={16}
@@ -118,49 +189,34 @@ export default function RecipeListScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* 搜索栏 */}
-      <View style={styles.searchContainer}>
-        <FontAwesome
-          name="search"
-          size={20}
-          color={theme.colors.textSecondary}
-        />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="搜索食谱"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholderTextColor={theme.colors.textSecondary}
-        />
+      {/* 顶部操作栏 */}
+      <View style={styles.header}>
+        <View style={styles.searchContainer}>
+          <FontAwesome
+            name="search"
+            size={20}
+            color={theme.colors.textSecondary}
+          />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="搜索食谱"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholderTextColor={theme.colors.textSecondary}
+          />
+        </View>
+        <TouchableOpacity
+          style={styles.manageButton}
+          onPress={() => {
+            setIsManageMode(!isManageMode);
+            setSelectedRecipes([]);
+          }}
+        >
+          <Text style={styles.manageButtonText}>
+            {isManageMode ? '完成' : '管理'}
+          </Text>
+        </TouchableOpacity>
       </View>
-
-      {/* 分类标签 */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.categoriesContainer}
-        contentContainerStyle={styles.categoriesContent}
-      >
-        {categories.map((category) => (
-          <TouchableOpacity
-            key={category.id}
-            style={[
-              styles.categoryButton,
-              selectedCategory === category.id && styles.categoryButtonActive,
-            ]}
-            onPress={() => setSelectedCategory(category.id)}
-          >
-            <Text
-              style={[
-                styles.categoryText,
-                selectedCategory === category.id && styles.categoryTextActive,
-              ]}
-            >
-              {category.name}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
 
       {/* 食谱列表 */}
       <FlatList
@@ -185,6 +241,20 @@ export default function RecipeListScreen() {
           ) : null
         }
       />
+
+      {/* 删除按钮 */}
+      {isManageMode && selectedRecipes.length > 0 && (
+        <View style={styles.deleteButtonContainer}>
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={handleDeleteSelected}
+          >
+            <Text style={styles.deleteButtonText}>
+              删除选中的食谱 ({selectedRecipes.length})
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -194,14 +264,20 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.surface,
   },
-  searchContainer: {
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: theme.spacing.md,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+  },
+  searchContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: theme.colors.surface,
-    marginHorizontal: theme.spacing.md,
-    marginVertical: theme.spacing.sm,
     borderRadius: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
   },
   searchInput: {
     ...theme.typography.body,
@@ -337,5 +413,54 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.xs,
+  },
+  manageButton: {
+    marginLeft: theme.spacing.md,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.spacing.sm,
+    backgroundColor: theme.colors.surface,
+  },
+  manageButtonText: {
+    ...theme.typography.body,
+    color: theme.colors.primary,
+  },
+  checkbox: {
+    position: 'absolute',
+    top: theme.spacing.sm,
+    right: theme.spacing.sm,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: theme.colors.background,
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxSelected: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  deleteButtonContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: theme.spacing.md,
+    backgroundColor: theme.colors.background,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.textSecondary,
+  },
+  deleteButton: {
+    backgroundColor: theme.colors.error,
+    borderRadius: theme.spacing.sm,
+    paddingVertical: theme.spacing.md,
+    alignItems: 'center',
+  },
+  deleteButtonText: {
+    ...theme.typography.body,
+    color: theme.colors.background,
+    fontWeight: 'bold',
   },
 });

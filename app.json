@@ -1,15 +1,28 @@
 {
   "expo": {
-    "name": "eat-what-app",
+    "name": "吃神喵",
     "slug": "eat-what-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "myapp",
+    "scheme": "eatwhat",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.cattenbox.eatwhat",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSCameraUsageDescription": "此应用需要访问相机来拍摄食物照片",
+        "NSPhotoLibraryUsageDescription": "此应用需要访问相册来选择食物照片",
+        "UIBackgroundModes": [
+          "fetch",
+          "remote-notification",
+          "fetch",
+          "remote-notification"
+        ],
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -36,6 +49,14 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "4d118683-2689-46d1-8ed4-d541bd40f762"
+      }
     }
   }
 }

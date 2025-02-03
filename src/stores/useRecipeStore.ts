@@ -204,7 +204,7 @@ const useRecipeStore = create<RecipeState>((set) => ({
     try {
       await Promise.all(
         recipeIds.map((id) =>
-          fetch(`${API_URL}/recipe/${id}`, {
+          fetch(`${API_URL}/recipes/${id}`, {
             method: 'DELETE',
             headers: getAuthHeaders(),
           })

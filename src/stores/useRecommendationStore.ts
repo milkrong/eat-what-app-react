@@ -1,8 +1,5 @@
 import { create } from 'zustand';
-import {
-  Recipe,
-  DietaryPreferences,
-} from '../types/recommendation';
+import { Recipe, DietaryPreferences } from '../types/recommendation';
 import { useAuthStore } from './useAuthStore';
 
 const API_URL =
@@ -59,9 +56,12 @@ const useRecommendationStore = create<RecommendationState>((set, get) => ({
     preferences: Partial<DietaryPreferences>,
     excludeRecipes?: string[]
   ) => {
-    const loadingKey = `${mealType}Loading` as 'breakfastLoading' | 'lunchLoading' | 'dinnerLoading';
+    const loadingKey = `${mealType}Loading` as
+      | 'breakfastLoading'
+      | 'lunchLoading'
+      | 'dinnerLoading';
     set({ [loadingKey]: true, error: null });
-    
+
     try {
       const response = await fetch(`${API_URL}/recommendations/single`, {
         method: 'POST',
@@ -72,10 +72,10 @@ const useRecommendationStore = create<RecommendationState>((set, get) => ({
             meal_type: mealType,
           },
           excludeRecipes,
-          provider: 'coze',
+          provider: 'siliconflow',
         }),
       });
-      
+
       if (!response.ok) throw new Error(`获取${mealType}推荐失败`);
       const data: Recipe = await response.json();
       set({ [mealType]: data });
@@ -86,7 +86,9 @@ const useRecommendationStore = create<RecommendationState>((set, get) => ({
     }
   },
 
-  fetchAllMealRecommendations: async (preferences: Partial<DietaryPreferences>) => {
+  fetchAllMealRecommendations: async (
+    preferences: Partial<DietaryPreferences>
+  ) => {
     const { fetchMealRecommendation } = get();
     await Promise.all([
       fetchMealRecommendation('breakfast', preferences),

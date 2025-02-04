@@ -15,86 +15,110 @@ const getAuthHeaders = () => {
 };
 
 interface RecommendationState {
-  breakfast: Recipe | null;
-  lunch: Recipe | null;
-  dinner: Recipe | null;
-  breakfastLoading: boolean;
-  lunchLoading: boolean;
-  dinnerLoading: boolean;
+  recommendations: Recipe[];
+  loading: boolean;
   error: string | null;
-  fetchMealRecommendation: (
-    mealType: 'breakfast' | 'lunch' | 'dinner',
+  fetchRecommendations: (
     preferences: Partial<DietaryPreferences>,
+    count?: number,
     excludeRecipes?: string[]
   ) => Promise<void>;
-  fetchAllMealRecommendations: (
-    preferences: Partial<DietaryPreferences>
+  appendRecommendations: (
+    preferences: Partial<DietaryPreferences>,
+    count?: number,
+    excludeRecipes?: string[]
   ) => Promise<void>;
   clearRecommendations: () => void;
 }
 
+const fetchSingleRecommendation = async (
+  preferences: Partial<DietaryPreferences>,
+  excludeRecipes?: string[]
+): Promise<Recipe> => {
+  const response = await fetch(`${API_URL}/recommendations/single`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({
+      preferences,
+      excludeRecipes,
+      provider: 'siliconflow',
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response
+      .json()
+      .catch(() => ({ message: '获取推荐失败' }));
+    throw new Error(errorData.message || '获取推荐失败');
+  }
+  return await response.json();
+};
+
 const useRecommendationStore = create<RecommendationState>((set, get) => ({
-  breakfast: null,
-  lunch: null,
-  dinner: null,
-  breakfastLoading: false,
-  lunchLoading: false,
-  dinnerLoading: false,
+  recommendations: [],
+  loading: false,
   error: null,
 
   clearRecommendations: () => {
     set({
-      breakfast: null,
-      lunch: null,
-      dinner: null,
+      recommendations: [],
       error: null,
     });
   },
 
-  fetchMealRecommendation: async (
-    mealType: 'breakfast' | 'lunch' | 'dinner',
+  fetchRecommendations: async (
     preferences: Partial<DietaryPreferences>,
+    count: number = 2,
     excludeRecipes?: string[]
   ) => {
-    const loadingKey = `${mealType}Loading` as
-      | 'breakfastLoading'
-      | 'lunchLoading'
-      | 'dinnerLoading';
-    set({ [loadingKey]: true, error: null });
+    set({ loading: true, error: null, recommendations: [] });
 
     try {
-      const response = await fetch(`${API_URL}/recommendations/single`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          preferences: {
-            ...preferences,
-            meal_type: mealType,
-          },
-          excludeRecipes,
-          provider: 'siliconflow',
-        }),
-      });
+      const promises = Array(count)
+        .fill(null)
+        .map(() => fetchSingleRecommendation(preferences, excludeRecipes));
 
-      if (!response.ok) throw new Error(`获取${mealType}推荐失败`);
-      const data: Recipe = await response.json();
-      set({ [mealType]: data });
+      const results = await Promise.all(promises);
+      set({ recommendations: results, error: null });
     } catch (error) {
       set({ error: (error as Error).message });
+      throw error;
     } finally {
-      set({ [loadingKey]: false });
+      set({ loading: false });
     }
   },
 
-  fetchAllMealRecommendations: async (
-    preferences: Partial<DietaryPreferences>
+  appendRecommendations: async (
+    preferences: Partial<DietaryPreferences>,
+    count: number = 2,
+    excludeRecipes?: string[]
   ) => {
-    const { fetchMealRecommendation } = get();
-    await Promise.all([
-      fetchMealRecommendation('breakfast', preferences),
-      fetchMealRecommendation('lunch', preferences),
-      fetchMealRecommendation('dinner', preferences),
-    ]);
+    set({ loading: true, error: null });
+
+    try {
+      const currentRecipes = get().recommendations;
+      const updatedExcludeRecipes = [
+        ...(excludeRecipes || []),
+        ...currentRecipes.map((r) => r.name),
+      ];
+
+      const promises = Array(count)
+        .fill(null)
+        .map(() =>
+          fetchSingleRecommendation(preferences, updatedExcludeRecipes)
+        );
+
+      const results = await Promise.all(promises);
+      set((state) => ({
+        recommendations: [...state.recommendations, ...results],
+        error: null,
+      }));
+    } catch (error) {
+      set({ error: (error as Error).message });
+      throw error;
+    } finally {
+      set({ loading: false });
+    }
   },
 }));
 

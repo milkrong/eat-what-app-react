@@ -24,6 +24,12 @@ import {
   ALLERGY_OPTIONS,
   DEFAULT_PREFERENCES,
 } from '@/constants/preferences';
+import {
+  PreferenceSection,
+  CaloriesRangeSection,
+  CookingTimeSection,
+} from '@/components/preferences';
+import Toast, { useToastStore } from '@/components/Toast';
 
 interface UserProfile {
   id: string;
@@ -149,67 +155,72 @@ const ProfileSkeleton = () => (
   </ScrollView>
 );
 
-export default function ProfileScreen() {
+const ProfileScreen = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [initialLoading, setInitialLoading] = useState(true);
-  const [isEditing, setIsEditing] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const { session, logout } = useAuthStore();
-  const { preferences, error, fetchPreferences, updatePreferences } =
-    usePreferencesStore();
+  const { showToast } = useToastStore();
+  const {
+    preferences,
+    loading: preferencesLoading,
+    fetchPreferences,
+    updatePreferences,
+  } = usePreferencesStore();
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      if (!session?.access_token) return;
-
-      try {
-        // 获取用户资料
-        const profileResponse = await fetch(
-          `${process.env.EXPO_PUBLIC_API_URL}/users/profile`,
-          {
-            headers: {
-              Authorization: `Bearer ${session.access_token}`,
-            },
-          }
-        );
-        if (!profileResponse.ok) throw new Error('获取用户资料失败');
-        const profileData = await profileResponse.json();
-        setProfile(profileData);
-
-        // 获取用户偏好设置
-        await fetchPreferences();
-      } catch (error) {
-        console.error('获取用户数据失败:', error);
-        Alert.alert('错误', '获取用户数据失败');
-      } finally {
-        setInitialLoading(false);
-      }
-    };
-
-    fetchUserData();
+    loadData();
   }, [session?.access_token]);
+
+  const loadData = async () => {
+    if (!session?.access_token) return;
+
+    try {
+      setLoading(true);
+      // 获取用户资料
+      const profileResponse = await fetch(
+        `${process.env.EXPO_PUBLIC_API_URL}/users/profile`,
+        {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        }
+      );
+      if (!profileResponse.ok) throw new Error('获取用户资料失败');
+      const profileData = await profileResponse.json();
+      setProfile(profileData);
+
+      // 获取偏好设置
+      await fetchPreferences();
+    } catch (error) {
+      console.error('获取数据失败:', error);
+      showToast('获取数据失败', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!preferences || saving) return;
+
+    try {
+      setSaving(true);
+      await updatePreferences(preferences);
+      showToast('保存成功', 'success');
+    } catch (error) {
+      console.error('保存偏好设置失败:', error);
+      showToast('保存失败', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleLogout = async () => {
     try {
       await logout();
       router.replace('/(auth)/login' as any);
     } catch (error) {
-      Alert.alert('错误', '退出登录失败');
-    }
-  };
-
-  const handleSavePreferences = async () => {
-    if (!preferences) return;
-
-    try {
-      setIsSaving(true);
-      await updatePreferences(preferences);
-      Alert.alert('成功', '偏好设置已保存');
-      setIsEditing(false);
-    } catch (error) {
-      Alert.alert('错误', '保存偏好设置失败');
-    } finally {
-      setIsSaving(false);
+      showToast('退出登录失败', 'error');
     }
   };
 
@@ -227,91 +238,7 @@ export default function ProfileScreen() {
     </View>
   );
 
-  const renderPreferenceItem = (
-    icon: keyof typeof FontAwesome.glyphMap,
-    label: string,
-    value: string | string[] | number,
-    field: keyof DietaryPreferences
-  ) => (
-    <View style={styles.preferenceItem}>
-      <View style={styles.preferenceHeader}>
-        <FontAwesome name={icon} size={20} color={theme.colors.primary} />
-        <Text style={styles.preferenceLabel}>{label}</Text>
-      </View>
-      {isEditing ? (
-        field === 'diet_type' ||
-        field === 'cuisine_type' ||
-        field === 'allergies' ? (
-          <View style={styles.chipContainer}>
-            {(field === 'diet_type'
-              ? DIET_TYPE_OPTIONS
-              : field === 'cuisine_type'
-              ? CUISINE_TYPE_OPTIONS
-              : ALLERGY_OPTIONS
-            ).map((type) => (
-              <TouchableOpacity
-                key={type}
-                style={[
-                  styles.chip,
-                  preferences?.[field].includes(type as DietType) &&
-                    styles.chipActive,
-                ]}
-                onPress={() => {
-                  if (!preferences) return;
-                  const currentValue = preferences[field] as string[];
-                  usePreferencesStore.setState({
-                    preferences: {
-                      ...preferences,
-                      [field]: currentValue.includes(type as DietType)
-                        ? currentValue.filter((t) => t !== type)
-                        : [...currentValue, type as DietType],
-                    },
-                  });
-                }}
-              >
-                <Text
-                  style={[
-                    styles.chipText,
-                    preferences?.[field].includes(type as DietType) &&
-                      styles.chipTextActive,
-                  ]}
-                >
-                  {type}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        ) : (
-          <TextInput
-            style={styles.input}
-            value={String(value)}
-            onChangeText={(newValue) => {
-              if (!preferences) return;
-              usePreferencesStore.setState({
-                preferences: {
-                  ...preferences,
-                  [field]:
-                    field === 'max_cooking_time' || field.includes('calories')
-                      ? parseInt(newValue) || 0
-                      : newValue,
-                },
-              });
-            }}
-            keyboardType="numeric"
-            placeholder={`输入${label}`}
-          />
-        )
-      ) : (
-        <Text style={styles.preferenceValue}>
-          {Array.isArray(value) ? value.join('、') : value}
-          {typeof value === 'number' &&
-            (label.includes('时间') ? ' 分钟' : ' 千卡')}
-        </Text>
-      )}
-    </View>
-  );
-
-  if (initialLoading || !profile || !preferences) {
+  if (loading || !profile) {
     return (
       <SafeAreaView style={styles.container}>
         <ProfileSkeleton />
@@ -320,131 +247,115 @@ export default function ProfileScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView>
-        {/* 头像和用户名区域 */}
-        <View style={styles.header}>
-          <Image source={{ uri: profile.avatar_url }} style={styles.avatar} />
-          <Text style={styles.username}>{profile.username}</Text>
-        </View>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <View style={styles.content}>
+        <ScrollView style={styles.scrollView}>
+          {/* 头像和用户名区域 */}
+          <View style={styles.header}>
+            <Image source={{ uri: profile.avatar_url }} style={styles.avatar} />
+            <Text style={styles.username}>{profile.username}</Text>
+          </View>
 
-        {/* 个人信息区域 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>个人信息</Text>
-          {renderInfoItem('envelope', '邮箱', profile.email)}
-          {renderInfoItem('user', '用户名', profile.username)}
-          {renderInfoItem(
-            'calendar',
-            '注册时间',
-            new Date(profile.created_at).toLocaleDateString()
-          )}
-        </View>
+          {/* 个人信息区域 */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>个人信息</Text>
+            {renderInfoItem('envelope', '邮箱', profile.email)}
+            {renderInfoItem('user', '用户名', profile.username)}
+            {renderInfoItem(
+              'calendar',
+              '注册时间',
+              new Date(profile.created_at).toLocaleDateString()
+            )}
+          </View>
 
-        {/* 偏好设置区域 */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>偏好设置</Text>
-            {!isEditing ? (
-              <TouchableOpacity
-                style={styles.editButton}
-                onPress={() => setIsEditing(true)}
-              >
+          {/* 设置区域 */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>设置</Text>
+            <TouchableOpacity
+              style={styles.settingItem}
+              onPress={() => router.push('/preferences')}
+            >
+              <View style={styles.settingItemLeft}>
                 <FontAwesome
-                  name="edit"
+                  name="sliders"
                   size={20}
                   color={theme.colors.primary}
                 />
-                <Text style={styles.editButtonText}>编辑</Text>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity
-                style={[
-                  styles.saveButton,
-                  isSaving && styles.saveButtonDisabled,
-                ]}
-                onPress={handleSavePreferences}
-                disabled={isSaving}
-              >
-                {isSaving ? (
-                  <ActivityIndicator
-                    size="small"
-                    color={theme.colors.background}
-                  />
-                ) : (
-                  <>
-                    <FontAwesome
-                      name="check"
-                      size={20}
-                      color={theme.colors.background}
-                    />
-                    <Text style={styles.saveButtonText}>保存</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            )}
+                <Text style={styles.settingItemText}>偏好设置</Text>
+              </View>
+              <FontAwesome
+                name="angle-right"
+                size={20}
+                color={theme.colors.textSecondary}
+              />
+            </TouchableOpacity>
           </View>
-          {renderPreferenceItem(
-            'cutlery',
-            '饮食类型',
-            preferences.diet_type || [],
-            'diet_type'
-          )}
-          {renderPreferenceItem(
-            'globe',
-            '菜系偏好',
-            preferences.cuisine_type || [],
-            'cuisine_type'
-          )}
-          {renderPreferenceItem(
-            'exclamation-triangle',
-            '过敏原',
-            preferences.allergies || [],
-            'allergies'
-          )}
-          {renderPreferenceItem(
-            'fire',
-            '最低卡路里限制',
-            preferences.calories_min || DEFAULT_PREFERENCES.calories_min,
-            'calories_min'
-          )}
-          {renderPreferenceItem(
-            'fire',
-            '最高卡路里限制',
-            preferences.calories_max || DEFAULT_PREFERENCES.calories_max,
-            'calories_max'
-          )}
-          {renderPreferenceItem(
-            'clock-o',
-            '最大烹饪时间',
-            preferences.max_cooking_time ||
-              DEFAULT_PREFERENCES.max_cooking_time,
-            'max_cooking_time'
-          )}
-        </View>
 
-        {/* 退出登录按钮 */}
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <FontAwesome name="sign-out" size={20} color={theme.colors.error} />
-          <Text style={styles.logoutText}>退出登录</Text>
-        </TouchableOpacity>
-      </ScrollView>
+          {/* 退出登录按钮 */}
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+            <FontAwesome name="sign-out" size={20} color={theme.colors.error} />
+            <Text style={styles.logoutText}>退出登录</Text>
+          </TouchableOpacity>
+
+          <View style={styles.bottomPadding} />
+        </ScrollView>
+      </View>
+      <Toast />
     </SafeAreaView>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
   },
+  content: {
+    flex: 1,
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  loadingText: {
+  scrollView: {
+    flex: 1,
+    padding: theme.spacing.md,
+  },
+  title: {
+    ...theme.typography.h1,
+    color: theme.colors.text,
+    marginBottom: theme.spacing.xl,
+  },
+  bottomPadding: {
+    height: 12,
+  },
+  fixedBottomContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: theme.colors.background,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.surface,
+    padding: theme.spacing.md,
+    paddingBottom: theme.spacing.lg,
+  },
+  saveButton: {
+    backgroundColor: theme.colors.primary,
+    padding: theme.spacing.md,
+    borderRadius: theme.spacing.sm,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  saveButtonText: {
+    color: theme.colors.background,
     ...theme.typography.body,
-    color: theme.colors.textSecondary,
+    fontWeight: 'bold',
+  },
+  disabledButton: {
+    opacity: 0.5,
   },
   header: {
     alignItems: 'center',
@@ -462,9 +373,9 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
   },
   section: {
-    padding: theme.spacing.lg,
+    padding: theme.spacing.md,
     backgroundColor: theme.colors.background,
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -475,35 +386,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     ...theme.typography.h2,
     color: theme.colors.text,
-  },
-  editButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: theme.spacing.sm,
-    borderRadius: theme.spacing.sm,
-    backgroundColor: theme.colors.surface,
-  },
-  editButtonText: {
-    ...theme.typography.body,
-    color: theme.colors.primary,
-    marginLeft: theme.spacing.xs,
-  },
-  saveButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: theme.spacing.sm,
-    borderRadius: theme.spacing.sm,
-    backgroundColor: theme.colors.primary,
-    minWidth: 80,
-    justifyContent: 'center',
-  },
-  saveButtonDisabled: {
-    opacity: 0.7,
-  },
-  saveButtonText: {
-    ...theme.typography.body,
-    color: theme.colors.background,
-    marginLeft: theme.spacing.xs,
   },
   infoItem: {
     flexDirection: 'row',
@@ -584,7 +466,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: theme.colors.surface,
-    margin: theme.spacing.lg,
+    margin: theme.spacing.md,
     padding: theme.spacing.md,
     borderRadius: 12,
   },
@@ -593,4 +475,23 @@ const styles = StyleSheet.create({
     color: theme.colors.error,
     marginLeft: theme.spacing.sm,
   },
+  settingItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: theme.spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.surface,
+  },
+  settingItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  settingItemText: {
+    ...theme.typography.body,
+    color: theme.colors.text,
+    marginLeft: theme.spacing.md,
+  },
 });
+
+export default ProfileScreen;

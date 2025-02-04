@@ -55,7 +55,7 @@ export default function TabsLayout() {
           ),
         }}
       />
-      <Tabs.Screen
+      {/* <Tabs.Screen
         name="ai"
         options={{
           title: 'AI助手',
@@ -63,7 +63,7 @@ export default function TabsLayout() {
             <FontAwesome name="magic" size={size} color={color} />
           ),
         }}
-      />
+      /> */}
       <Tabs.Screen
         name="profile"
         options={{

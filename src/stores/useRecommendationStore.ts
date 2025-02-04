@@ -1,8 +1,6 @@
 import { create } from 'zustand';
 import {
   Recipe,
-  DailyRecommendation,
-  RecommendationState,
   DietaryPreferences,
 } from '../types/recommendation';
 import { useAuthStore } from './useAuthStore';
@@ -19,60 +17,82 @@ const getAuthHeaders = () => {
   };
 };
 
-const useRecommendationStore = create<RecommendationState>((set) => ({
-  currentRecommendation: null,
-  dailyRecommendation: null,
-  singleLoading: false,
-  dailyLoading: false,
+interface RecommendationState {
+  breakfast: Recipe | null;
+  lunch: Recipe | null;
+  dinner: Recipe | null;
+  breakfastLoading: boolean;
+  lunchLoading: boolean;
+  dinnerLoading: boolean;
+  error: string | null;
+  fetchMealRecommendation: (
+    mealType: 'breakfast' | 'lunch' | 'dinner',
+    preferences: Partial<DietaryPreferences>,
+    excludeRecipes?: string[]
+  ) => Promise<void>;
+  fetchAllMealRecommendations: (
+    preferences: Partial<DietaryPreferences>
+  ) => Promise<void>;
+  clearRecommendations: () => void;
+}
+
+const useRecommendationStore = create<RecommendationState>((set, get) => ({
+  breakfast: null,
+  lunch: null,
+  dinner: null,
+  breakfastLoading: false,
+  lunchLoading: false,
+  dinnerLoading: false,
   error: null,
 
-  fetchRecommendation: async (
+  clearRecommendations: () => {
+    set({
+      breakfast: null,
+      lunch: null,
+      dinner: null,
+      error: null,
+    });
+  },
+
+  fetchMealRecommendation: async (
+    mealType: 'breakfast' | 'lunch' | 'dinner',
     preferences: Partial<DietaryPreferences>,
     excludeRecipes?: string[]
   ) => {
-    set({ singleLoading: true, error: null });
+    const loadingKey = `${mealType}Loading` as 'breakfastLoading' | 'lunchLoading' | 'dinnerLoading';
+    set({ [loadingKey]: true, error: null });
+    
     try {
       const response = await fetch(`${API_URL}/recommendations/single`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({
-          preferences,
+          preferences: {
+            ...preferences,
+            meal_type: mealType,
+          },
           excludeRecipes,
           provider: 'coze',
         }),
       });
-      if (!response.ok) throw new Error('获取推荐失败');
+      
+      if (!response.ok) throw new Error(`获取${mealType}推荐失败`);
       const data: Recipe = await response.json();
-      console.log(data);
-      set({ currentRecommendation: data });
+      set({ [mealType]: data });
     } catch (error) {
       set({ error: (error as Error).message });
     } finally {
-      set({ singleLoading: false });
+      set({ [loadingKey]: false });
     }
   },
 
-  fetchDailyRecommendation: async (
-    preferences: Partial<DietaryPreferences>
-  ) => {
-    set({ dailyLoading: true, error: null });
-    try {
-      const response = await fetch(`${API_URL}/recommendations/daily`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          preferences,
-          provider: 'coze',
-        }),
-      });
-      if (!response.ok) throw new Error('获取每日推荐失败');
-      const data: DailyRecommendation = await response.json();
-      set({ dailyRecommendation: data });
-    } catch (error) {
-      set({ error: (error as Error).message });
-    } finally {
-      set({ dailyLoading: false });
-    }
+  fetchAllMealRecommendations: async (preferences: Partial<DietaryPreferences>) => {
+    const { fetchMealRecommendation } = get();
+    await Promise.all([
+      fetchMealRecommendation('breakfast', preferences),
+      fetchMealRecommendation('lunch', preferences),
+      fetchMealRecommendation('dinner', preferences),
+    ]);
   },
 }));
 

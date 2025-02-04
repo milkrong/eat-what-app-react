@@ -7,7 +7,6 @@ import {
   StyleSheet,
   ScrollView,
   Animated,
-  Alert,
   TextInput,
   Dimensions,
 } from 'react-native';
@@ -17,7 +16,7 @@ import { useRecommendationStore } from '@/stores/useRecommendationStore';
 import { theme } from '@/theme';
 import { Recipe as DBRecipe } from '@/types/recipe';
 import {
-  Recipe as RecommendationRecipe,
+  Recipe,
   DietaryPreferences,
   DietType,
 } from '@/types/recommendation';
@@ -30,6 +29,8 @@ import {
   CUISINE_TYPE_OPTIONS,
   DIET_TYPE_OPTIONS,
 } from '@/constants/preferences';
+import Toast, { useToastStore } from '@/components/Toast';
+import Slider from '@react-native-community/slider';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -156,18 +157,21 @@ const DailyRecommendationSkeleton = () => (
   </View>
 );
 
-export default function RecommendationScreen() {
-  const [showPreferences, setShowPreferences] = useState(true);
+const RecommendationScreen = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { session } = useAuthStore();
+  const { showToast } = useToastStore();
   const {
-    currentRecommendation,
-    dailyRecommendation,
-    singleLoading,
-    dailyLoading,
-    fetchRecommendation,
-    fetchDailyRecommendation,
+    breakfast,
+    lunch,
+    dinner,
+    breakfastLoading,
+    lunchLoading,
+    dinnerLoading,
+    fetchMealRecommendation,
+    fetchAllMealRecommendations,
+    clearRecommendations,
   } = useRecommendationStore();
   const {
     preferences,
@@ -177,6 +181,11 @@ export default function RecommendationScreen() {
   } = usePreferencesStore();
   const { saveRecipe } = useRecipeStore();
 
+  // 检查是否有推荐数据或正在生成
+  const hasRecommendations = breakfast || lunch || dinner;
+  const isGenerating = breakfastLoading || lunchLoading || dinnerLoading;
+  const shouldShowForm = !hasRecommendations && !isGenerating;
+
   useEffect(() => {
     const loadPreferences = async () => {
       if (!session?.access_token) return;
@@ -185,7 +194,7 @@ export default function RecommendationScreen() {
         await fetchPreferences();
       } catch (error) {
         console.error('获取偏好设置失败:', error);
-        Alert.alert('错误', '获取偏好设置失败');
+        showToast('获取偏好设置失败', 'error');
       } finally {
         setLoading(false);
       }
@@ -202,80 +211,31 @@ export default function RecommendationScreen() {
       await updatePreferences(preferences);
 
       // 获取推荐
-      setShowPreferences(false);
-      await Promise.all([
-        fetchRecommendation(preferences),
-        fetchDailyRecommendation(preferences),
-      ]);
+      await fetchAllMealRecommendations(preferences);
     } catch (err) {
       console.error('获取推荐失败:', err);
-      Alert.alert('错误', '获取推荐失败');
+      showToast('获取推荐失败', 'error');
     }
   };
 
-  const handleSkipRecommendation = () => {
+  const handleRefreshMeal = async (mealType: 'breakfast' | 'lunch' | 'dinner') => {
     if (!preferences) return;
-    fetchRecommendation(
+    
+    const currentMeal = useRecommendationStore.getState()[mealType];
+    await fetchMealRecommendation(
+      mealType,
       preferences,
-      currentRecommendation ? [currentRecommendation.name] : undefined
+      currentMeal ? [currentMeal.name] : undefined
     );
   };
 
-  const handleAddToRecipe = async () => {
-    if (!currentRecommendation || !preferences) return;
-
-    try {
-      const recipeData: Partial<DBRecipe> = {
-        name: currentRecommendation.name,
-        description: `${currentRecommendation.cuisine_type.join(
-          '/'
-        )} - ${currentRecommendation.diet_type.join('/')}`,
-        cooking_time: currentRecommendation.cooking_time,
-        calories: currentRecommendation.calories,
-        nutrition_facts: {
-          ...currentRecommendation.nutrition_facts,
-          fiber: currentRecommendation.nutrition_facts.fiber || 0,
-        },
-        ingredients: currentRecommendation.ingredients.map((ing) => ({
-          ...ing,
-        })),
-        steps: currentRecommendation.steps.map((step, index) => ({
-          order: index + 1,
-          description: step,
-          image_url: undefined,
-        })),
-        cuisine_type: currentRecommendation.cuisine_type,
-        diet_type: currentRecommendation.diet_type,
-        img: currentRecommendation.img,
-      };
-
-      await saveRecipe(recipeData, preferences);
-      Alert.alert('成功', '已添加到我的食谱');
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '保存食谱失败';
-      console.error('保存食谱失败:', errorMessage);
-      Alert.alert('错误', errorMessage);
-    }
-  };
-
-  const handleReplace = async () => {
-    if (!currentRecommendation || !preferences) return;
-
-    try {
-      await fetchRecommendation(preferences, [currentRecommendation.name]);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '获取推荐失败';
-      console.error('获取推荐失败:', errorMessage);
-      Alert.alert('错误', errorMessage);
-    }
-  };
-
   const handleApplyDailyRecommendation = async () => {
-    if (!dailyRecommendation || !preferences) return;
+    if (!preferences || !breakfast || !lunch || !dinner) return;
 
     try {
+      const meals = [breakfast, lunch, dinner];
       await Promise.all(
-        dailyRecommendation.map((recipe) => {
+        meals.map((recipe) => {
           const recipeData: Partial<DBRecipe> = {
             name: recipe.name,
             description: `${recipe.cuisine_type.join(
@@ -302,259 +262,240 @@ export default function RecommendationScreen() {
           return saveRecipe(recipeData, preferences);
         })
       );
-      Alert.alert('成功', '已添加所有推荐到我的食谱');
+      showToast('已添加所有推荐到我的食谱', 'success');
     } catch (err) {
       console.error('保存食谱失败:', err);
-      Alert.alert('错误', '保存食谱失败');
+      showToast('保存食谱失败', 'error');
     }
   };
 
-  if (error) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.content}>
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity
-            style={styles.retryButton}
-            onPress={() => {
-              if (!preferences) return;
-              fetchRecommendation(preferences);
-              fetchDailyRecommendation(preferences);
-            }}
-          >
-            <Text style={styles.retryButtonText}>重试</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  const handleModifyPreferences = () => {
+    clearRecommendations();
+  };
 
-  const renderSingleRecommendation = () => {
-    if (singleLoading) {
-      return <SingleRecommendationSkeleton />;
+  const renderMealCard = (
+    meal: Recipe | null,
+    mealType: 'breakfast' | 'lunch' | 'dinner',
+    isLoading: boolean
+  ) => {
+    if (isLoading) {
+      return (
+        <View style={styles.mealCard}>
+          <SkeletonLoader width={80} height={80} />
+          <View style={styles.mealInfo}>
+            <SkeletonLoader width={60} height={16} />
+            <SkeletonLoader
+              width={120}
+              height={20}
+              style={{ marginVertical: theme.spacing.xs }}
+            />
+            <SkeletonLoader width={80} height={16} />
+          </View>
+          <View style={styles.replaceMealButton}>
+            <SkeletonLoader
+              width={32}
+              height={32}
+              style={{ borderRadius: 16 }}
+            />
+          </View>
+        </View>
+      );
     }
 
-    if (!currentRecommendation) {
+    if (!meal) {
       return (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>获取推荐失败</Text>
+        <View style={styles.mealCard}>
+          <View style={[styles.mealImage, styles.errorContainer]}>
+            <FontAwesome name="exclamation-circle" size={24} color={theme.colors.error} />
+          </View>
+          <View style={styles.mealInfo}>
+            <Text style={styles.mealType}>
+              {mealType === 'breakfast' ? '早餐' : mealType === 'lunch' ? '午餐' : '晚餐'}
+            </Text>
+            <Text style={[styles.mealName, { color: theme.colors.error }]}>获取推荐失败</Text>
+          </View>
           <TouchableOpacity
-            style={styles.retryButton}
-            onPress={() => {
-              if (!preferences) return;
-              fetchRecommendation(preferences);
-            }}
+            style={styles.replaceMealButton}
+            onPress={() => handleRefreshMeal(mealType)}
           >
-            <Text style={styles.retryButtonText}>重试</Text>
+            <FontAwesome name="refresh" size={16} color={theme.colors.primary} />
           </TouchableOpacity>
         </View>
       );
     }
 
     return (
-      <View style={styles.singleRecommendation}>
-        <LinearGradient
-          colors={['rgba(0,0,0,0.6)', 'transparent']}
-          style={styles.recommendationGradient}
-        >
-          <View style={styles.recommendationHeader}>
-            <View style={styles.matchScore}>
-              <Text style={styles.matchScoreText}>
-                {currentRecommendation.calories}
-              </Text>
-              <Text style={styles.matchScoreLabel}>卡路里</Text>
-            </View>
-            <View style={styles.recommendationTags}>
-              {[
-                ...currentRecommendation.cuisine_type,
-                ...currentRecommendation.diet_type,
-              ].map((tag) => (
-                <View key={tag} style={styles.tag}>
-                  <Text style={styles.tagText}>{tag}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        </LinearGradient>
+      <View style={styles.mealCard}>
         <Image
           source={{
-            uri: currentRecommendation.img,
+            uri: meal.img,
           }}
-          style={styles.recommendationImage}
+          style={styles.mealImage}
         />
-        <View
-          style={[
-            styles.recommendationInfo,
-            { backgroundColor: 'rgba(0,0,0,0.6)' },
-          ]}
-        >
-          <View style={styles.recommendationContent}>
-            <Text style={styles.recommendationTitle}>
-              {currentRecommendation.name}
-            </Text>
-            <View style={styles.recipeMetrics}>
-              <View style={styles.metricItem}>
-                <FontAwesome
-                  name="clock-o"
-                  size={16}
-                  color={theme.colors.background}
-                />
-                <Text style={styles.metricText}>
-                  {currentRecommendation.cooking_time}分钟
-                </Text>
-              </View>
-              <View style={styles.metricItem}>
-                <FontAwesome
-                  name="cutlery"
-                  size={16}
-                  color={theme.colors.background}
-                />
-                <Text style={styles.metricText}>
-                  {currentRecommendation.ingredients.length}种食材
-                </Text>
-              </View>
-            </View>
-          </View>
-          <View style={styles.recommendationActions}>
-            <TouchableOpacity
-              style={[styles.actionButton, styles.skipButton]}
-              onPress={handleSkipRecommendation}
-            >
-              <FontAwesome name="refresh" size={20} color={theme.colors.text} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionButton, styles.addButton]}
-              onPress={handleAddToRecipe}
-            >
-              <FontAwesome
-                name="plus"
-                size={20}
-                color={theme.colors.background}
-              />
-            </TouchableOpacity>
-          </View>
+        <View style={styles.mealInfo}>
+          <Text style={styles.mealType}>
+            {mealType === 'breakfast' ? '早餐' : mealType === 'lunch' ? '午餐' : '晚餐'}
+          </Text>
+          <Text style={styles.mealName}>{meal.name}</Text>
+          <Text style={styles.mealCalories}>{meal.calories} 千卡</Text>
         </View>
+        <TouchableOpacity
+          style={styles.replaceMealButton}
+          onPress={() => handleRefreshMeal(mealType)}
+        >
+          <FontAwesome name="refresh" size={16} color={theme.colors.primary} />
+        </TouchableOpacity>
       </View>
     );
   };
 
   const renderDailyRecommendation = () => {
-    if (dailyLoading) {
-      return <DailyRecommendationSkeleton />;
-    }
-
-    if (!dailyRecommendation) {
-      return (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>获取每日推荐失败</Text>
-          <TouchableOpacity
-            style={styles.retryButton}
-            onPress={() => {
-              if (!preferences) return;
-              fetchDailyRecommendation(preferences);
-            }}
-          >
-            <Text style={styles.retryButtonText}>重试</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-
-    const totalCalories = dailyRecommendation.reduce(
-      (sum, meal) => sum + meal.calories,
+    const totalCalories = [breakfast, lunch, dinner].reduce(
+      (sum, meal) => sum + (meal?.calories || 0),
       0
     );
-    const totalProtein = dailyRecommendation.reduce(
-      (sum, meal) => sum + meal.nutrition_facts.protein,
+    const totalProtein = [breakfast, lunch, dinner].reduce(
+      (sum, meal) => sum + (meal?.nutrition_facts.protein || 0),
       0
     );
-    const totalCarbs = dailyRecommendation.reduce(
-      (sum, meal) => sum + meal.nutrition_facts.carbs,
+    const totalCarbs = [breakfast, lunch, dinner].reduce(
+      (sum, meal) => sum + (meal?.nutrition_facts.carbs || 0),
       0
     );
-    const totalFat = dailyRecommendation.reduce(
-      (sum, meal) => sum + meal.nutrition_facts.fat,
+    const totalFat = [breakfast, lunch, dinner].reduce(
+      (sum, meal) => sum + (meal?.nutrition_facts.fat || 0),
       0
     );
 
     return (
       <View style={styles.dailyRecommendation}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>今日推荐</Text>
-          <View style={styles.nutritionBadge}>
-            <FontAwesome
-              name="check-circle"
-              size={14}
-              color={theme.colors.primary}
-            />
-            <Text style={styles.nutritionScore}>
-              总热量 {totalCalories} 千卡
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.nutritionStats}>
-          <View style={styles.nutritionGrid}>
-            <View style={styles.nutritionItem}>
-              <Text style={styles.nutritionValue}>{totalProtein}g</Text>
-              <Text style={styles.nutritionLabel}>蛋白质</Text>
-            </View>
-            <View style={styles.nutritionItem}>
-              <Text style={styles.nutritionValue}>{totalCarbs}g</Text>
-              <Text style={styles.nutritionLabel}>碳水</Text>
-            </View>
-            <View style={styles.nutritionItem}>
-              <Text style={styles.nutritionValue}>{totalFat}g</Text>
-              <Text style={styles.nutritionLabel}>脂肪</Text>
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.mealsContainer}>
-          {dailyRecommendation.map((meal, index) => (
-            <View key={`${meal.name}-${index}`} style={styles.mealCard}>
-              <Image
-                source={{
-                  uri:
-                    meal.img ||
-                    'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg',
-                }}
-                style={styles.mealImage}
+        {/* 顶部卡片：营养摘要 */}
+        <View style={styles.nutritionCard}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>今日营养摘要</Text>
+            <View style={styles.nutritionBadge}>
+              <FontAwesome
+                name="check-circle"
+                size={14}
+                color={theme.colors.primary}
               />
-              <View style={styles.mealInfo}>
-                <Text style={styles.mealType}>
-                  {index === 0 ? '早餐' : index === 1 ? '午餐' : '晚餐'}
-                </Text>
-                <Text style={styles.mealName}>{meal.name}</Text>
-                <Text style={styles.mealCalories}>{meal.calories} 千卡</Text>
-              </View>
-              <TouchableOpacity
-                style={styles.replaceMealButton}
-                onPress={handleReplace}
-              >
-                <FontAwesome
-                  name="refresh"
-                  size={16}
-                  color={theme.colors.primary}
-                />
-              </TouchableOpacity>
+              <Text style={styles.nutritionScore}>
+                总热量 {totalCalories} 千卡
+              </Text>
             </View>
-          ))}
+          </View>
+
+          <View style={styles.nutritionStats}>
+            <View style={styles.nutritionGrid}>
+              <View style={styles.nutritionItem}>
+                <Text style={styles.nutritionValue}>{totalProtein}g</Text>
+                <Text style={styles.nutritionLabel}>蛋白质</Text>
+              </View>
+              <View style={styles.nutritionItem}>
+                <Text style={styles.nutritionValue}>{totalCarbs}g</Text>
+                <Text style={styles.nutritionLabel}>碳水</Text>
+              </View>
+              <View style={styles.nutritionItem}>
+                <Text style={styles.nutritionValue}>{totalFat}g</Text>
+                <Text style={styles.nutritionLabel}>脂肪</Text>
+              </View>
+            </View>
+          </View>
         </View>
 
-        <View style={styles.applyDailyButton}>
+        {/* 今日菜单部分 */}
+        <View style={styles.menuSection}>
+          <Text style={styles.menuTitle}>今日菜单</Text>
+          <View style={styles.mealsContainer}>
+            {renderMealCard(breakfast, 'breakfast', breakfastLoading)}
+            {renderMealCard(lunch, 'lunch', lunchLoading)}
+            {renderMealCard(dinner, 'dinner', dinnerLoading)}
+          </View>
+        </View>
+
+        {/* 底部操作按钮 */}
+        <View style={styles.bottomActions}>
           <TouchableOpacity
-            style={styles.applyButton}
+            style={[
+              styles.applyButton,
+              (!breakfast || !lunch || !dinner) && styles.disabledButton,
+            ]}
             onPress={handleApplyDailyRecommendation}
+            disabled={!breakfast || !lunch || !dinner}
           >
-            <Text style={styles.applyButtonText}>应用今日推荐</Text>
+            <FontAwesome name="save" size={20} color={theme.colors.background} style={styles.buttonIcon} />
+            <Text style={styles.applyButtonText}>保存到我的食谱</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.modifyPreferencesButton}
-            onPress={() => setShowPreferences(true)}
+            onPress={handleModifyPreferences}
           >
+            <FontAwesome name="sliders" size={20} color={theme.colors.primary} style={styles.buttonIcon} />
             <Text style={styles.modifyPreferencesText}>修改偏好设置</Text>
           </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
+
+  const renderCaloriesRange = () => {
+    const minCalories = preferences?.calories_min || 300;
+    const maxCalories = preferences?.calories_max || 600;
+
+    return (
+      <View style={styles.formSection}>
+        <Text style={styles.sectionTitle}>卡路里范围</Text>
+        <View style={styles.caloriesRangeContainer}>
+          <View style={styles.caloriesSliderContainer}>
+            <Text style={styles.caloriesValue}>{minCalories} - {maxCalories} 千卡</Text>
+            <View style={styles.sliderRow}>
+              <Slider
+                style={styles.slider}
+                minimumValue={50}
+                maximumValue={1000}
+                step={25}
+                value={minCalories}
+                onValueChange={(value) =>
+                  usePreferencesStore.setState({
+                    preferences: {
+                      ...preferences!,
+                      calories_min: value,
+                      calories_max: Math.max(value, maxCalories),
+                    },
+                  })
+                }
+                minimumTrackTintColor={theme.colors.primary}
+                maximumTrackTintColor={theme.colors.surface}
+                thumbTintColor={theme.colors.primary}
+              />
+            </View>
+            <View style={styles.sliderRow}>
+              <Slider
+                style={styles.slider}
+                minimumValue={50}
+                maximumValue={1000}
+                step={25}
+                value={maxCalories}
+                onValueChange={(value) =>
+                  usePreferencesStore.setState({
+                    preferences: {
+                      ...preferences!,
+                      calories_max: value,
+                      calories_min: Math.min(value, minCalories),
+                    },
+                  })
+                }
+                minimumTrackTintColor={theme.colors.primary}
+                maximumTrackTintColor={theme.colors.surface}
+                thumbTintColor={theme.colors.primary}
+              />
+            </View>
+            <View style={styles.caloriesLabels}>
+              <Text style={styles.caloriesLabel}>50</Text>
+              <Text style={styles.caloriesLabel}>500</Text>
+              <Text style={styles.caloriesLabel}>1000</Text>
+            </View>
+          </View>
         </View>
       </View>
     );
@@ -563,7 +504,7 @@ export default function RecommendationScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.content}>
-        {showPreferences ? (
+        {shouldShowForm ? (
           <View style={styles.preferencesWrapper}>
             <ScrollView style={styles.preferencesContainer}>
               <Text style={styles.preferencesTitle}>设置偏好</Text>
@@ -682,45 +623,7 @@ export default function RecommendationScreen() {
                 </View>
               </View>
 
-              <View style={styles.formSection}>
-                <Text style={styles.sectionTitle}>卡路里范围</Text>
-                <View style={styles.caloriesInputContainer}>
-                  <View style={styles.caloriesInput}>
-                    <Text style={styles.caloriesLabel}>最小值</Text>
-                    <TextInput
-                      style={styles.input}
-                      value={String(preferences?.calories_min || 1500)}
-                      onChangeText={(value) =>
-                        usePreferencesStore.setState({
-                          preferences: {
-                            ...preferences!,
-                            calories_min: parseInt(value) || 0,
-                          },
-                        })
-                      }
-                      keyboardType="numeric"
-                      placeholder="最小卡路里"
-                    />
-                  </View>
-                  <View style={styles.caloriesInput}>
-                    <Text style={styles.caloriesLabel}>最大值</Text>
-                    <TextInput
-                      style={styles.input}
-                      value={String(preferences?.calories_max || 2500)}
-                      onChangeText={(value) =>
-                        usePreferencesStore.setState({
-                          preferences: {
-                            ...preferences!,
-                            calories_max: parseInt(value) || 0,
-                          },
-                        })
-                      }
-                      keyboardType="numeric"
-                      placeholder="最大卡路里"
-                    />
-                  </View>
-                </View>
-              </View>
+              {renderCaloriesRange()}
 
               <View style={styles.formSection}>
                 <Text style={styles.sectionTitle}>最大烹饪时间（分钟）</Text>
@@ -756,15 +659,16 @@ export default function RecommendationScreen() {
           <ScrollView
             style={styles.recommendationsContainer}
             showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.recommendationsContent}
           >
-            {renderSingleRecommendation()}
             {renderDailyRecommendation()}
           </ScrollView>
         )}
       </View>
+      <Toast />
     </SafeAreaView>
   );
-}
+};
 
 const baseTypography = {
   body: {
@@ -976,16 +880,79 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primary,
   },
   dailyRecommendation: {
-    padding: theme.spacing.md,
+    flex: 1,
+    minHeight: '100%',
+  },
+  nutritionCard: {
     backgroundColor: theme.colors.surface,
-    borderRadius: theme.spacing.lg,
+    borderRadius: theme.spacing.md,
+    padding: theme.spacing.lg,
+    marginBottom: theme.spacing.lg,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 2.84,
+    elevation: 3,
+  },
+  menuSection: {
+    flex: 1,
+    marginBottom: theme.spacing.xl,
+  },
+  menuTitle: {
+    ...baseTypography.h2,
+    color: theme.colors.text,
     marginBottom: theme.spacing.md,
   },
-  sectionHeader: {
+  mealsContainer: {
+    gap: theme.spacing.md,
+  },
+  mealCard: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: theme.spacing.md,
+    padding: theme.spacing.sm,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.spacing.md,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 2.84,
+    elevation: 3,
+  },
+  mealImage: {
+    width: 80,
+    height: 80,
+    borderRadius: theme.spacing.xs,
+  },
+  mealInfo: {
+    flex: 1,
+    marginLeft: theme.spacing.md,
+  },
+  mealType: {
+    ...theme.typography.caption,
+    color: theme.colors.textSecondary,
+  },
+  mealName: {
+    ...theme.typography.body,
+    color: theme.colors.text,
+    marginVertical: theme.spacing.xs,
+  },
+  mealCalories: {
+    ...theme.typography.caption,
+    color: theme.colors.textSecondary,
+  },
+  replaceMealButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: theme.colors.primary + '20',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   nutritionBadge: {
     flexDirection: 'row',
@@ -994,7 +961,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primary + '20',
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
-    borderRadius: theme.spacing.sm,
+    borderRadius: theme.spacing.xs,
   },
   nutritionScore: {
     ...theme.typography.caption,
@@ -1018,83 +985,36 @@ const styles = StyleSheet.create({
     ...theme.typography.caption,
     color: theme.colors.textSecondary,
   },
-  mealsContainer: {
-    gap: theme.spacing.sm,
+  bottomActions: {
+    gap: theme.spacing.md,
+    marginTop: 'auto',
+    paddingVertical: theme.spacing.lg,
   },
-  mealCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: theme.spacing.sm,
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.spacing.sm,
+  buttonIcon: {
+    marginRight: theme.spacing.sm,
   },
-  mealImage: {
-    width: 80,
-    height: 80,
-    borderRadius: theme.spacing.sm,
-  },
-  mealInfo: {
+  recommendationsContainer: {
     flex: 1,
-    marginLeft: theme.spacing.md,
   },
-  mealType: {
-    ...theme.typography.caption,
-    color: theme.colors.textSecondary,
-  },
-  mealName: {
-    ...theme.typography.body,
-    color: theme.colors.text,
-    marginVertical: theme.spacing.xs,
-  },
-  mealCalories: {
-    ...theme.typography.caption,
-    color: theme.colors.textSecondary,
-  },
-  replaceMealButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: theme.colors.primary + '20',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  applyDailyButton: {
-    marginTop: theme.spacing.md,
-    gap: theme.spacing.sm,
+  recommendationsContent: {
+    flexGrow: 1,
+    padding: theme.spacing.md,
   },
   applyButton: {
     backgroundColor: theme.colors.primary,
     padding: theme.spacing.md,
     borderRadius: theme.spacing.sm,
+    flexDirection: 'row',
     alignItems: 'center',
-    width: '100%',
+    justifyContent: 'center',
   },
   applyButtonText: {
-    ...theme.typography.body,
     color: theme.colors.background,
+    ...baseTypography.body,
     fontWeight: 'bold',
   },
-  caloriesInputContainer: {
-    flexDirection: 'row',
-    gap: theme.spacing.sm,
-  },
-  caloriesInput: {
-    flex: 1,
-  },
-  caloriesLabel: {
-    ...theme.typography.caption,
-    color: theme.colors.textSecondary,
-  },
-  recommendationsContainer: {
-    flex: 1,
-    paddingHorizontal: theme.spacing.md,
-  },
-  bottomContainer: {
-    padding: theme.spacing.md,
-    paddingBottom: theme.spacing.lg,
-    backgroundColor: theme.colors.background,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.surface,
+  disabledButton: {
+    opacity: 0.5,
   },
   fixedBottomContainer: {
     position: 'absolute',
@@ -1107,6 +1027,43 @@ const styles = StyleSheet.create({
     padding: theme.spacing.md,
     paddingBottom: theme.spacing.lg,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing.md,
+  },
+  caloriesRangeContainer: {
+    backgroundColor: theme.colors.background,
+    borderRadius: theme.spacing.sm,
+    padding: theme.spacing.md,
+  },
+  caloriesSliderContainer: {
+    alignItems: 'center',
+  },
+  caloriesValue: {
+    ...baseTypography.h2,
+    color: theme.colors.primary,
+    marginBottom: theme.spacing.md,
+  },
+  sliderRow: {
+    width: '100%',
+    marginBottom: theme.spacing.xs,
+  },
+  slider: {
+    width: '100%',
+    height: 40,
+  },
+  caloriesLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    paddingHorizontal: theme.spacing.xs,
+  },
+  caloriesLabel: {
+    ...theme.typography.caption,
+    color: theme.colors.textSecondary,
+  },
   modifyPreferencesButton: {
     backgroundColor: 'transparent',
     padding: theme.spacing.md,
@@ -1114,11 +1071,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: theme.colors.primary,
-    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'center',
   },
   modifyPreferencesText: {
-    ...theme.typography.body,
+    ...baseTypography.body,
     color: theme.colors.primary,
     fontWeight: 'bold',
   },
 });
+
+export default RecommendationScreen;

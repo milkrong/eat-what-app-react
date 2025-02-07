@@ -9,12 +9,6 @@ import {
   AuthResponse,
 } from '../types/auth';
 
-// 默认用户账号（仅开发环境使用）
-export const DEFAULT_USER = {
-  email: 'milkrong121@outlook.com',
-  password: 'Milkkai5315!?!',
-};
-
 interface AuthState {
   user: User | null;
   session: Session | null;

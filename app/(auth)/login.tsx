@@ -8,16 +8,19 @@ import {
   Alert,
 } from 'react-native';
 import { router } from 'expo-router';
-import { useAuthStore, DEFAULT_USER } from '@/stores/useAuthStore';
+import { useAuthStore } from '@/stores/useAuthStore';
 import { theme } from '@/theme';
 
 export default function LoginScreen() {
   const [email, setEmail] = React.useState(
-    process.env.EXPO_PUBLIC_DEV_MODE === 'true' ? DEFAULT_USER.email : ''
+    process.env.EXPO_PUBLIC_DEV_MODE === 'true' ? process.env.EMAIL || '' : ''
   );
   const [password, setPassword] = React.useState(
-    process.env.EXPO_PUBLIC_DEV_MODE === 'true' ? DEFAULT_USER.password : ''
+    process.env.EXPO_PUBLIC_DEV_MODE === 'true'
+      ? process.env.PASSWORD || ''
+      : ''
   );
+
   const { login, loading } = useAuthStore();
 
   const handleLogin = async () => {

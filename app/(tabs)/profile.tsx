@@ -6,29 +6,14 @@ import {
   ScrollView,
   Image,
   TouchableOpacity,
-  Alert,
-  TextInput,
   Animated,
-  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome } from '@expo/vector-icons';
 import { theme } from '../../src/theme';
 import { router } from 'expo-router';
 import { useAuthStore } from '@/stores/useAuthStore';
-import { usePreferencesStore } from '@/stores/usePreferencesStore';
-import { DietaryPreferences, DietType } from '@/types/recommendation';
-import {
-  DIET_TYPE_OPTIONS,
-  CUISINE_TYPE_OPTIONS,
-  ALLERGY_OPTIONS,
-  DEFAULT_PREFERENCES,
-} from '@/constants/preferences';
-import {
-  PreferenceSection,
-  CaloriesRangeSection,
-  CookingTimeSection,
-} from '@/components/preferences';
+
 import Toast, { useToastStore } from '@/components/Toast';
 
 interface UserProfile {
@@ -159,13 +144,6 @@ const ProfileScreen = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const { session, logout } = useAuthStore();
   const { showToast } = useToastStore();
-  const {
-    preferences,
-    loading: preferencesLoading,
-    fetchPreferences,
-    updatePreferences,
-  } = usePreferencesStore();
-  const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -189,29 +167,11 @@ const ProfileScreen = () => {
       if (!profileResponse.ok) throw new Error('获取用户资料失败');
       const profileData = await profileResponse.json();
       setProfile(profileData);
-
-      // 获取偏好设置
-      await fetchPreferences();
     } catch (error) {
       console.error('获取数据失败:', error);
       showToast('获取数据失败', 'error');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleSave = async () => {
-    if (!preferences || saving) return;
-
-    try {
-      setSaving(true);
-      await updatePreferences(preferences);
-      showToast('保存成功', 'success');
-    } catch (error) {
-      console.error('保存偏好设置失败:', error);
-      showToast('保存失败', 'error');
-    } finally {
-      setSaving(false);
     }
   };
 

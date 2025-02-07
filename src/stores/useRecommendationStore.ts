@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { Recipe, DietaryPreferences } from '../types/recommendation';
 import { useAuthStore } from './useAuthStore';
+import { useGlobalStore } from './useGlobalStore';
 
 const API_URL =
   process.env.EXPO_PUBLIC_API_URL || 'https://eatwhatapi.cattenbox.com/api';
@@ -35,13 +36,18 @@ const fetchSingleRecommendation = async (
   preferences: Partial<DietaryPreferences>,
   excludeRecipes?: string[]
 ): Promise<Recipe> => {
+  const { settings } = useGlobalStore.getState();
+  if (!settings?.llmService) {
+    throw new Error('请先设置 AI 服务');
+  }
+
   const response = await fetch(`${API_URL}/recommendations/single`, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify({
       preferences,
       excludeRecipes,
-      provider: 'siliconflow',
+      provider: settings.llmService,
     }),
   });
 

@@ -5,7 +5,7 @@
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
-    "ios": "expo start --ios",
+    "ios": "expo start --ios -c",
     "web": "expo start --web",
     "test": "jest --watchAll",
     "lint": "expo lint"
@@ -47,6 +47,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
+    "@types/expo": "^33.0.3",
     "@types/jest": "^29.5.12",
     "@types/react": "~18.3.12",
     "@types/react-test-renderer": "^18.3.0",

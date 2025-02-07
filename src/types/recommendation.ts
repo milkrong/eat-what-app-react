@@ -12,6 +12,8 @@ export interface DietaryPreferences {
   calories_max: number;
   max_cooking_time: number;
   meals_per_day: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface RecommendationRequest {
@@ -98,11 +100,11 @@ export interface NutritionFacts {
 export interface Recipe {
   name: string;
   calories: number;
-  cooking_time: number;
-  cuisine_type: string[];
-  diet_type: string[];
+  cookingTime: number;
+  cuisineType: string[];
+  dietType: string[];
   ingredients: Ingredient[];
-  nutrition_facts: NutritionFacts;
+  nutritionFacts: NutritionFacts;
   steps: string[];
   img?: string;
 }

@@ -18,9 +18,9 @@ export interface Recipe {
 }
 
 export interface RecipeFilters {
-  cuisineType?: string;
-  maxCookingTime?: number;
-  dietType?: string[];
+  cuisine_type?: string;
+  max_cooking_time?: number;
+  diet_type?: string[];
 }
 
 export interface Ingredient {

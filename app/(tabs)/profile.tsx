@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,16 +13,21 @@ import { FontAwesome } from '@expo/vector-icons';
 import { theme } from '../../src/theme';
 import { router } from 'expo-router';
 import { useAuthStore } from '@/stores/useAuthStore';
-
 import Toast, { useToastStore } from '@/components/Toast';
+import { useGlobalStore } from '@/stores/useGlobalStore';
 
-interface UserProfile {
+interface Settings {
   id: string;
-  username: string;
-  email: string;
-  avatar_url: string;
-  created_at: string;
+  llmService: 'coze' | 'dify' | 'deepseek' | 'siliconflow' | 'custom';
+  modelName?: string;
+  isPaid: boolean;
+  apiKey?: string;
+  apiEndpoint?: string;
+  createdAt: string;
+  updatedAt: string;
 }
+
+type IconName = keyof typeof FontAwesome.glyphMap;
 
 interface SkeletonLoaderProps {
   width?: number | string;
@@ -141,39 +146,10 @@ const ProfileSkeleton = () => (
 );
 
 const ProfileScreen = () => {
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const { session, logout } = useAuthStore();
+  const { profile, loading: globalLoading, preferences, settings } = useGlobalStore();
+  const {  logout } = useAuthStore();
   const { showToast } = useToastStore();
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadData();
-  }, [session?.access_token]);
-
-  const loadData = async () => {
-    if (!session?.access_token) return;
-
-    try {
-      setLoading(true);
-      // 获取用户资料
-      const profileResponse = await fetch(
-        `${process.env.EXPO_PUBLIC_API_URL}/users/profile`,
-        {
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        }
-      );
-      if (!profileResponse.ok) throw new Error('获取用户资料失败');
-      const profileData = await profileResponse.json();
-      setProfile(profileData);
-    } catch (error) {
-      console.error('获取数据失败:', error);
-      showToast('获取数据失败', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleLogout = async () => {
     try {
@@ -185,7 +161,7 @@ const ProfileScreen = () => {
   };
 
   const renderInfoItem = (
-    icon: keyof typeof FontAwesome.glyphMap,
+    icon: IconName,
     label: string,
     value: string
   ) => (
@@ -198,7 +174,15 @@ const ProfileScreen = () => {
     </View>
   );
 
-  if (loading || !profile) {
+  const llmServiceLabels: Record<Settings['llmService'], string> = {
+    coze: 'Coze',
+    dify: 'Dify',
+    deepseek: 'DeepSeek',
+    siliconflow: 'SiliconFlow',
+    custom: '自定义',
+  };
+
+  if (globalLoading || !profile) {
     return (
       <SafeAreaView style={styles.container}>
         <ProfileSkeleton />
@@ -212,19 +196,18 @@ const ProfileScreen = () => {
         <ScrollView style={styles.scrollView}>
           {/* 头像和用户名区域 */}
           <View style={styles.header}>
-            <Image source={{ uri: profile.avatar_url }} style={styles.avatar} />
+            <Image source={{ uri: profile.avatarUrl }} style={styles.avatar} />
             <Text style={styles.username}>{profile.username}</Text>
           </View>
 
           {/* 个人信息区域 */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>个人信息</Text>
-            {renderInfoItem('envelope', '邮箱', profile.email)}
             {renderInfoItem('user', '用户名', profile.username)}
             {renderInfoItem(
               'calendar',
               '注册时间',
-              new Date(profile.created_at).toLocaleDateString()
+              new Date(profile.createdAt).toLocaleDateString()
             )}
           </View>
 
@@ -233,7 +216,7 @@ const ProfileScreen = () => {
             <Text style={styles.sectionTitle}>设置</Text>
             <TouchableOpacity
               style={styles.settingItem}
-              onPress={() => router.push('/preferences')}
+              onPress={() => router.push('/preferences' as any)}
             >
               <View style={styles.settingItemLeft}>
                 <FontAwesome
@@ -243,11 +226,40 @@ const ProfileScreen = () => {
                 />
                 <Text style={styles.settingItemText}>偏好设置</Text>
               </View>
-              <FontAwesome
-                name="angle-right"
-                size={20}
-                color={theme.colors.textSecondary}
-              />
+              <View style={styles.settingItemRight}>
+                <Text style={styles.settingItemValue}>
+                  {preferences?.diet_type?.length || 0} 项已设置
+                </Text>
+                <FontAwesome
+                  name="angle-right"
+                  size={20}
+                  color={theme.colors.textSecondary}
+                />
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.settingItem}
+              onPress={() => router.push('/llm-settings' as any)}
+            >
+              <View style={styles.settingItemLeft}>
+                <FontAwesome
+                  name="cog"
+                  size={20}
+                  color={theme.colors.primary}
+                />
+                <Text style={styles.settingItemText}>AI 服务设置</Text>
+              </View>
+              <View style={styles.settingItemRight}>
+                <Text style={styles.settingItemValue}>
+                  {settings?.llmService ? llmServiceLabels[settings.llmService as keyof typeof llmServiceLabels] : '未设置'}
+                </Text>
+                <FontAwesome
+                  name="angle-right"
+                  size={20}
+                  color={theme.colors.textSecondary}
+                />
+              </View>
             </TouchableOpacity>
           </View>
 
@@ -451,6 +463,15 @@ const styles = StyleSheet.create({
     ...theme.typography.body,
     color: theme.colors.text,
     marginLeft: theme.spacing.md,
+  },
+  settingItemRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+  },
+  settingItemValue: {
+    ...theme.typography.caption,
+    color: theme.colors.textSecondary,
   },
 });
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -9,12 +9,13 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../src/theme';
-import { usePreferencesStore } from '@/stores/usePreferencesStore';
+import { useGlobalStore } from '@/stores/useGlobalStore';
 import { DietType } from '@/types/recommendation';
 import {
   DIET_TYPE_OPTIONS,
   CUISINE_TYPE_OPTIONS,
   ALLERGY_OPTIONS,
+  LIMIT_OPTIONS,
 } from '@/constants/preferences';
 import {
   PreferenceSection,
@@ -28,25 +29,12 @@ import { FontAwesome } from '@expo/vector-icons';
 const PreferencesScreen = () => {
   const { showToast } = useToastStore();
   const {
+    setPreferences,
     preferences,
     loading: preferencesLoading,
-    fetchPreferences,
     updatePreferences,
-  } = usePreferencesStore();
+  } = useGlobalStore();
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    loadPreferences();
-  }, []);
-
-  const loadPreferences = async () => {
-    try {
-      await fetchPreferences();
-    } catch (error) {
-      console.error('获取偏好设置失败:', error);
-      showToast('获取偏好设置失败', 'error');
-    }
-  };
 
   const handleSave = async () => {
     if (!preferences || saving) return;
@@ -96,11 +84,9 @@ const PreferencesScreen = () => {
             options={DIET_TYPE_OPTIONS}
             selectedValues={preferences?.diet_type || []}
             onValueChange={(values) =>
-              usePreferencesStore.setState({
-                preferences: {
-                  ...preferences!,
-                  diet_type: values as DietType[],
-                },
+              setPreferences({
+                ...preferences!,
+                diet_type: values as DietType[],
               })
             }
           />
@@ -110,11 +96,9 @@ const PreferencesScreen = () => {
             options={CUISINE_TYPE_OPTIONS}
             selectedValues={preferences?.cuisine_type || []}
             onValueChange={(values) =>
-              usePreferencesStore.setState({
-                preferences: {
-                  ...preferences!,
-                  cuisine_type: values,
-                },
+              setPreferences({
+                ...preferences!,
+                cuisine_type: values,
               })
             }
           />
@@ -124,11 +108,21 @@ const PreferencesScreen = () => {
             options={ALLERGY_OPTIONS}
             selectedValues={preferences?.allergies || []}
             onValueChange={(values) =>
-              usePreferencesStore.setState({
-                preferences: {
-                  ...preferences!,
-                  allergies: values,
-                },
+              setPreferences({
+                ...preferences!,
+                allergies: values,
+              })
+            }
+          />
+
+          <PreferenceSection
+            title="限制"
+            options={LIMIT_OPTIONS}
+            selectedValues={preferences?.restrictions || []}
+            onValueChange={(values) =>
+              setPreferences({
+                ...preferences!,
+                restrictions: values,
               })
             }
           />
@@ -139,12 +133,10 @@ const PreferencesScreen = () => {
               max: preferences?.calories_max || 600,
             }}
             onChange={({ min, max }) =>
-              usePreferencesStore.setState({
-                preferences: {
-                  ...preferences!,
-                  calories_min: min,
-                  calories_max: max,
-                },
+              setPreferences({
+                ...preferences!,
+                calories_min: min,
+                calories_max: max,
               })
             }
           />
@@ -152,11 +144,9 @@ const PreferencesScreen = () => {
           <CookingTimeSection
             value={preferences?.max_cooking_time || 45}
             onChange={(value) =>
-              usePreferencesStore.setState({
-                preferences: {
-                  ...preferences!,
-                  max_cooking_time: value,
-                },
+              setPreferences({
+                ...preferences!,
+                max_cooking_time: value,
               })
             }
           />

@@ -1,9 +1,11 @@
+import React from 'react';
 import { Stack } from 'expo-router';
 import { useEffect } from 'react';
 import { useAuthStore } from '@/stores/useAuthStore';
 import Toast, { ToastProps } from 'react-native-toast-message';
 import { BaseToast } from 'react-native-toast-message/lib/src/components/BaseToast';
 import { theme } from '@/theme';
+import { GlobalDataLoader } from '@/components/GlobalDataLoader';
 
 const toastConfig = {
   success: (props: ToastProps) => (
@@ -54,13 +56,16 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <>
+    <GlobalDataLoader>
       <Stack
         screenOptions={{
           headerShown: false,
         }}
-      />
+      >
+        <Stack.Screen name="preferences" />
+        <Stack.Screen name="llm-settings" />
+      </Stack>
       <Toast config={toastConfig} />
-    </>
+    </GlobalDataLoader>
   );
 }

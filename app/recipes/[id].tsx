@@ -19,11 +19,6 @@ import { theme } from '../../src/theme';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useRecipeStore } from '@/stores/useRecipeStore';
 
-interface Ingredient {
-  name: string;
-  amount: number;
-  unit: string;
-}
 
 interface Step {
   order: number;
@@ -31,27 +26,6 @@ interface Step {
   image_url?: string;
 }
 
-interface NutritionFacts {
-  calories: number;
-  protein: number;
-  carbs: number;
-  fat: number;
-}
-
-interface Recipe {
-  id: string;
-  name: string;
-  description: string;
-  cooking_time: number;
-  difficulty: string;
-  servings: number;
-  calories: number;
-  nutrition_facts: NutritionFacts;
-  ingredients: Ingredient[];
-  steps: Step[];
-  images: string[];
-  is_favorite?: boolean;
-}
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const IMAGE_HEIGHT = SCREEN_WIDTH * 0.75;
@@ -202,7 +176,6 @@ export default function RecipeDetailScreen() {
   const { currentRecipe, loading, error, fetchRecipeById, toggleFavorite } =
     useRecipeStore();
   const [showMealPlanModal, setShowMealPlanModal] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedMealType, setSelectedMealType] = useState<string | null>(null);
   const [dateInput, setDateInput] = useState(() => {
     const today = new Date();

@@ -46,7 +46,6 @@ export const useMealPlanStore = create<MealPlanState>((set, get) => ({
           headers: getAuthHeaders(),
         }
       );
-      console.log('response', response, response.ok);
       if (!response.ok) {
         if (response.status === 404) {
           // 如果没有找到餐单，创建一个空的餐单结构
@@ -72,7 +71,6 @@ export const useMealPlanStore = create<MealPlanState>((set, get) => ({
         ),
         snack: mealPlans.filter((meal: MealPlan) => meal.meal_type === 'snack'),
       };
-      console.log('groupedMealPlans', groupedMealPlans);
 
       set({ dailyPlan: groupedMealPlans, loading: false });
     } catch (error) {

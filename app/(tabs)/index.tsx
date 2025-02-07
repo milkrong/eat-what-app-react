@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -7,8 +7,6 @@ import {
   StyleSheet,
   ScrollView,
   Animated,
-  TextInput,
-  Dimensions,
   ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,21 +18,20 @@ import { Recipe, DietaryPreferences, DietType } from '@/types/recommendation';
 import { useRecipeStore } from '../../src/stores/useRecipeStore';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/stores/useAuthStore';
-import { usePreferencesStore } from '@/stores/usePreferencesStore';
+import { useGlobalStore } from '@/stores/useGlobalStore';
 import {
   ALLERGY_OPTIONS,
   CUISINE_TYPE_OPTIONS,
   DIET_TYPE_OPTIONS,
 } from '@/constants/preferences';
 import Toast, { useToastStore } from '@/components/Toast';
-import Slider from '@react-native-community/slider';
+
 import {
   PreferenceSection,
   CaloriesRangeSection,
   CookingTimeSection,
 } from '@/components/preferences';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface SkeletonLoaderProps {
   width?: number | string;
@@ -140,9 +137,6 @@ const RecommendationSkeleton = () => {
 };
 
 const RecommendationScreen = () => {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const { session } = useAuthStore();
   const { showToast } = useToastStore();
   const {
     recommendations,
@@ -154,9 +148,9 @@ const RecommendationScreen = () => {
   const {
     preferences,
     loading: preferencesLoading,
-    fetchPreferences,
     updatePreferences,
-  } = usePreferencesStore();
+    setPreferences,
+  } = useGlobalStore();
   const { saveRecipe } = useRecipeStore();
 
   // 检查是否有推荐数据或正在生成
@@ -164,22 +158,7 @@ const RecommendationScreen = () => {
   const isGenerating = recommendationsLoading;
   const shouldShowForm = !hasRecommendations && !isGenerating;
 
-  useEffect(() => {
-    const loadPreferences = async () => {
-      if (!session?.access_token) return;
 
-      try {
-        await fetchPreferences();
-      } catch (error) {
-        console.error('获取偏好设置失败:', error);
-        showToast('获取偏好设置失败', 'error');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadPreferences();
-  }, [session?.access_token]);
 
   const handleStartRecommendation = async () => {
     if (!preferences) return;
@@ -218,16 +197,16 @@ const RecommendationScreen = () => {
     try {
       const recipeData: Partial<DBRecipe> = {
         name: recipe.name,
-        description: `${recipe.cuisine_type.join(
+        description: `${recipe.cuisineType.join(
           '/'
-        )} - ${recipe.diet_type.join('/')}`,
-        cooking_time: recipe.cooking_time,
+        )} - ${recipe.dietType.join('/')}`,
+        cooking_time: recipe.cookingTime,
         calories: recipe.calories,
-        cuisine_type: recipe.cuisine_type,
-        diet_type: recipe.diet_type,
+        cuisine_type: recipe.cuisineType,
+        diet_type: recipe.dietType,
         nutrition_facts: {
-          ...recipe.nutrition_facts,
-          fiber: recipe.nutrition_facts.fiber || 0,
+          ...recipe.nutritionFacts,
+          fiber: recipe.nutritionFacts.fiber || 0,
         },
         ingredients: recipe.ingredients.map((ing) => ({
           ...ing,
@@ -264,12 +243,12 @@ const RecommendationScreen = () => {
         >
           <View style={styles.recommendationHeader}>
             <View style={styles.recommendationTags}>
-              {recipe.cuisine_type.map((type) => (
+              {recipe.cuisineType.map((type) => (
                 <View key={type} style={styles.tag}>
                   <Text style={styles.tagText}>{type}</Text>
                 </View>
               ))}
-              {recipe.diet_type.map((type) => (
+              {recipe.dietType.map((type) => (
                 <View key={type} style={styles.tag}>
                   <Text style={styles.tagText}>{type}</Text>
                 </View>
@@ -292,7 +271,7 @@ const RecommendationScreen = () => {
                     color={theme.colors.background}
                   />
                   <Text style={styles.metricText}>
-                    {recipe.cooking_time}分钟
+                    {recipe.cookingTime}分钟
                   </Text>
                 </View>
                 <View style={styles.metricItem}>
@@ -398,11 +377,9 @@ const RecommendationScreen = () => {
                 options={DIET_TYPE_OPTIONS}
                 selectedValues={preferences?.diet_type || []}
                 onValueChange={(values) =>
-                  usePreferencesStore.setState({
-                    preferences: {
-                      ...preferences!,
-                      diet_type: values as DietType[],
-                    },
+                  setPreferences({
+                    ...preferences!,
+                    diet_type: values as DietType[],
                   })
                 }
               />
@@ -412,11 +389,9 @@ const RecommendationScreen = () => {
                 options={CUISINE_TYPE_OPTIONS}
                 selectedValues={preferences?.cuisine_type || []}
                 onValueChange={(values) =>
-                  usePreferencesStore.setState({
-                    preferences: {
-                      ...preferences!,
-                      cuisine_type: values,
-                    },
+                  setPreferences({
+                    ...preferences!,
+                    cuisine_type: values,
                   })
                 }
               />
@@ -426,11 +401,9 @@ const RecommendationScreen = () => {
                 options={ALLERGY_OPTIONS}
                 selectedValues={preferences?.allergies || []}
                 onValueChange={(values) =>
-                  usePreferencesStore.setState({
-                    preferences: {
-                      ...preferences!,
-                      allergies: values,
-                    },
+                  setPreferences({
+                    ...preferences!,
+                    allergies: values,
                   })
                 }
               />
@@ -441,12 +414,10 @@ const RecommendationScreen = () => {
                   max: preferences?.calories_max || 600,
                 }}
                 onChange={({ min, max }) =>
-                  usePreferencesStore.setState({
-                    preferences: {
-                      ...preferences!,
-                      calories_min: min,
-                      calories_max: max,
-                    },
+                  setPreferences({
+                    ...preferences!,
+                    calories_min: min,
+                    calories_max: max,
                   })
                 }
               />
@@ -454,11 +425,9 @@ const RecommendationScreen = () => {
               <CookingTimeSection
                 value={preferences?.max_cooking_time || 45}
                 onChange={(value) =>
-                  usePreferencesStore.setState({
-                    preferences: {
-                      ...preferences!,
-                      max_cooking_time: value,
-                    },
+                  setPreferences({
+                    ...preferences!,
+                    max_cooking_time: value,
                   })
                 }
               />

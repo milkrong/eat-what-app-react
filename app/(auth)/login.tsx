@@ -12,13 +12,19 @@ import { useAuthStore } from '@/stores/useAuthStore';
 import { theme } from '@/theme';
 
 export default function LoginScreen() {
+  console.log(
+    typeof process.env.EXPO_PUBLIC_DEV_MODE,
+    process.env.EXPO_PUBLIC_DEV_MODE
+  );
   const [email, setEmail] = React.useState(
-    process.env.EXPO_PUBLIC_DEV_MODE === 'true' ? process.env.EMAIL || '' : ''
+    process.env.EXPO_PUBLIC_DEV_MODE
+      ? process.env.EMAIL || 'milkrong121@outlook.com'
+      : 'milkrong121@outlook.com'
   );
   const [password, setPassword] = React.useState(
-    process.env.EXPO_PUBLIC_DEV_MODE === 'true'
-      ? process.env.PASSWORD || ''
-      : ''
+    process.env.EXPO_PUBLIC_DEV_MODE
+      ? process.env.PASSWORD || 'Milkkai5315!?!'
+      : 'Milkkai5315!?!'
   );
 
   const { login, loading } = useAuthStore();

@@ -65,6 +65,7 @@ const LLMSettingsScreen = () => {
     { value: 'dify', label: 'Dify', icon: 'magic' },
     { value: 'deepseek', label: 'DeepSeek', icon: 'lightbulb-o' },
     { value: 'siliconflow', label: 'SiliconFlow', icon: 'rocket' },
+    { value: 'ark', label: 'Ark', icon: 'magic' },
     { value: 'custom', label: '自定义', icon: 'gear' },
   ];
 
@@ -79,12 +80,11 @@ const LLMSettingsScreen = () => {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-        <FontAwesome
-              name="angle-left"
-              size={24}
-              color={theme.colors.text}
-            />
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backButton}
+        >
+          <FontAwesome name="angle-left" size={24} color={theme.colors.text} />
         </TouchableOpacity>
         <Text style={styles.title}>AI 服务设置</Text>
       </View>
@@ -98,17 +98,25 @@ const LLMSettingsScreen = () => {
                 key={service.value}
                 style={[
                   styles.serviceOption,
-                  form.llmService === service.value && styles.serviceOptionActive,
+                  form.llmService === service.value &&
+                    styles.serviceOptionActive,
                 ]}
                 onPress={() =>
-                  setForm((prev) => ({ ...prev, llmService: service.value as Settings['llmService'] }))
+                  setForm((prev) => ({
+                    ...prev,
+                    llmService: service.value as Settings['llmService'],
+                  }))
                 }
               >
                 <View style={styles.serviceIconContainer}>
                   <FontAwesome
                     name={service.icon}
                     size={20}
-                    color={form.llmService === service.value ? theme.colors.primary : theme.colors.textSecondary}
+                    color={
+                      form.llmService === service.value
+                        ? theme.colors.primary
+                        : theme.colors.textSecondary
+                    }
                   />
                 </View>
                 <Text
@@ -301,4 +309,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default LLMSettingsScreen; 
+export default LLMSettingsScreen;

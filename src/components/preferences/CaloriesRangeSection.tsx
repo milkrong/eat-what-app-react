@@ -8,6 +8,9 @@ import {
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { theme } from '@/theme';
+import { useGlobalStore } from '@/stores/useGlobalStore';
+
+const ACTIVE_COLOR = '#FF9500';
 
 const CALORIES_PRESETS = [
   { label: '低卡路里', min: 200, max: 400 },
@@ -24,6 +27,7 @@ export const CaloriesRangeSection: React.FC<CaloriesRangeSectionProps> = ({
   value,
   onChange,
 }) => {
+  const { themeColor } = useGlobalStore();
   const [isExpanded, setIsExpanded] = useState(true);
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [customMin, setCustomMin] = useState(value.min.toString());
@@ -41,6 +45,135 @@ export const CaloriesRangeSection: React.FC<CaloriesRangeSectionProps> = ({
   const isPresetActive = (preset: (typeof CALORIES_PRESETS)[0]) => {
     return value.min === preset.min && value.max === preset.max;
   };
+
+  const styles = StyleSheet.create({
+    preferenceSection: {
+      marginBottom: theme.spacing.lg,
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.spacing.sm,
+      overflow: 'hidden',
+    },
+    sectionHeader: {
+      padding: theme.spacing.md,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    sectionTitle: {
+      ...theme.typography.h2,
+      color: theme.colors.text,
+    },
+    headerRight: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    caloriesRangeText: {
+      ...theme.typography.caption,
+      color: theme.colors.textSecondary,
+    },
+    sectionContent: {
+      padding: 8,
+    },
+    caloriesPresets: {
+      gap: theme.spacing.sm,
+    },
+    caloriesPresetButton: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      backgroundColor: theme.colors.background,
+      padding: theme.spacing.sm,
+      borderRadius: theme.spacing.sm,
+      borderWidth: 1,
+      borderColor: theme.colors.surface,
+    },
+    caloriesPresetButtonActive: {
+      backgroundColor: `${themeColor}20`,
+      borderColor: themeColor,
+    },
+    caloriesPresetText: {
+      ...theme.typography.body,
+      color: theme.colors.text,
+    },
+    caloriesPresetTextActive: {
+      color: themeColor,
+    },
+    caloriesPresetRange: {
+      ...theme.typography.caption,
+      color: theme.colors.textSecondary,
+    },
+    caloriesPresetRangeActive: {
+      color: themeColor,
+    },
+    customRangeButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: theme.spacing.xs,
+      marginTop: theme.spacing.sm,
+      padding: theme.spacing.sm,
+      borderRadius: theme.spacing.sm,
+      borderWidth: 1,
+      borderStyle: 'dashed',
+      borderColor: themeColor,
+    },
+    customRangeButtonText: {
+      ...theme.typography.body,
+      color: themeColor,
+    },
+    customRangeInputContainer: {
+      marginTop: theme.spacing.sm,
+      gap: theme.spacing.sm,
+    },
+    customRangeInputs: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.sm,
+    },
+    customRangeInput: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+      paddingVertical: theme.spacing.sm,
+      paddingHorizontal: theme.spacing.md,
+      borderRadius: theme.spacing.sm,
+      color: theme.colors.text,
+      ...theme.typography.body,
+      textAlign: 'center',
+    },
+    customRangeSeparator: {
+      ...theme.typography.body,
+      color: theme.colors.text,
+    },
+    customRangeUnit: {
+      ...theme.typography.body,
+      color: theme.colors.textSecondary,
+    },
+    customRangeActions: {
+      flexDirection: 'row',
+      gap: theme.spacing.sm,
+    },
+    customRangeAction: {
+      flex: 1,
+      padding: theme.spacing.sm,
+      borderRadius: theme.spacing.sm,
+      alignItems: 'center',
+    },
+    customRangeCancel: {
+      backgroundColor: theme.colors.surface,
+    },
+    customRangeConfirm: {
+      backgroundColor: themeColor,
+    },
+    customRangeCancelText: {
+      ...theme.typography.body,
+      color: theme.colors.text,
+    },
+    customRangeConfirmText: {
+      ...theme.typography.body,
+      color: theme.colors.background,
+      fontWeight: 'bold',
+    },
+  });
 
   return (
     <View style={styles.preferenceSection}>
@@ -99,7 +232,7 @@ export const CaloriesRangeSection: React.FC<CaloriesRangeSectionProps> = ({
               style={styles.customRangeButton}
               onPress={() => setShowCustomInput(true)}
             >
-              <FontAwesome name="plus" size={14} color={theme.colors.primary} />
+              <FontAwesome name="plus" size={14} color={themeColor} />
               <Text style={styles.customRangeButtonText}>自定义范围</Text>
             </TouchableOpacity>
           ) : (
@@ -147,132 +280,3 @@ export const CaloriesRangeSection: React.FC<CaloriesRangeSectionProps> = ({
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  preferenceSection: {
-    marginBottom: theme.spacing.lg,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.spacing.sm,
-    overflow: 'hidden',
-  },
-  sectionHeader: {
-    padding: theme.spacing.md,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  sectionTitle: {
-    ...theme.typography.h2,
-    color: theme.colors.text,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  caloriesRangeText: {
-    ...theme.typography.caption,
-    color: theme.colors.textSecondary,
-  },
-  sectionContent: {
-    padding: 8,
-  },
-  caloriesPresets: {
-    gap: theme.spacing.sm,
-  },
-  caloriesPresetButton: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: theme.colors.background,
-    padding: theme.spacing.sm,
-    borderRadius: theme.spacing.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.surface,
-  },
-  caloriesPresetButtonActive: {
-    backgroundColor: theme.colors.primary + '20',
-    borderColor: theme.colors.primary,
-  },
-  caloriesPresetText: {
-    ...theme.typography.body,
-    color: theme.colors.text,
-  },
-  caloriesPresetTextActive: {
-    color: theme.colors.primary,
-  },
-  caloriesPresetRange: {
-    ...theme.typography.caption,
-    color: theme.colors.textSecondary,
-  },
-  caloriesPresetRangeActive: {
-    color: theme.colors.primary,
-  },
-  customRangeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: theme.spacing.xs,
-    marginTop: theme.spacing.sm,
-    padding: theme.spacing.sm,
-    borderRadius: theme.spacing.sm,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: theme.colors.primary,
-  },
-  customRangeButtonText: {
-    ...theme.typography.body,
-    color: theme.colors.primary,
-  },
-  customRangeInputContainer: {
-    marginTop: theme.spacing.sm,
-    gap: theme.spacing.sm,
-  },
-  customRangeInputs: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-  },
-  customRangeInput: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.spacing.sm,
-    color: theme.colors.text,
-    ...theme.typography.body,
-    textAlign: 'center',
-  },
-  customRangeSeparator: {
-    ...theme.typography.body,
-    color: theme.colors.text,
-  },
-  customRangeUnit: {
-    ...theme.typography.body,
-    color: theme.colors.textSecondary,
-  },
-  customRangeActions: {
-    flexDirection: 'row',
-    gap: theme.spacing.sm,
-  },
-  customRangeAction: {
-    flex: 1,
-    padding: theme.spacing.sm,
-    borderRadius: theme.spacing.sm,
-    alignItems: 'center',
-  },
-  customRangeCancel: {
-    backgroundColor: theme.colors.surface,
-  },
-  customRangeConfirm: {
-    backgroundColor: theme.colors.primary,
-  },
-  customRangeCancelText: {
-    ...theme.typography.body,
-    color: theme.colors.text,
-  },
-  customRangeConfirmText: {
-    ...theme.typography.body,
-    color: theme.colors.background,
-    fontWeight: 'bold',
-  },
-});

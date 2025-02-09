@@ -20,12 +20,332 @@ import {
 import { FontAwesome } from '@expo/vector-icons';
 import { theme } from '../../src/theme';
 import type { MealType, MealPlan } from '../../src/types/meal-plan';
-import { MEAL_TYPE_CONFIG } from '../../src/types/meal-plan';
+import { mealType_CONFIG } from '../../src/types/meal-plan';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useMealPlanStore } from '@/stores/useMealPlanStore';
 import { router } from 'expo-router';
 import { useRecipeStore } from '@/stores/useRecipeStore';
 import Toast from 'react-native-toast-message';
+import { useGlobalStore } from '@/stores/useGlobalStore';
+
+// Skeleton styles
+const skeletonStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  skeletonCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 8,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+  },
+  skeletonContent: {
+    gap: theme.spacing.sm,
+  },
+  skeletonTitle: {
+    height: 20,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 4,
+    width: '60%',
+  },
+  skeletonText: {
+    height: 16,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 4,
+    width: '40%',
+  },
+  nutritionStats: {
+    padding: theme.spacing.md,
+  },
+  nutritionGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  nutritionItem: {
+    alignItems: 'center',
+  },
+  skeletonValue: {
+    height: 24,
+    width: 48,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 4,
+    marginBottom: 4,
+  },
+  skeletonLabel: {
+    height: 16,
+    width: 32,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 4,
+  },
+  mealSection: {
+    marginBottom: theme.spacing.lg,
+  },
+  skeletonHeader: {
+    height: 48,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 8,
+    marginBottom: theme.spacing.sm,
+  },
+});
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  calendarHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: theme.spacing.md,
+  },
+  calendarTitle: {
+    ...theme.typography.h2,
+    color: theme.colors.text,
+  },
+  viewToggle: {
+    padding: theme.spacing.sm,
+  },
+  mealList: {
+    flex: 1,
+  },
+  mealSection: {
+    marginBottom: theme.spacing.lg,
+  },
+  mealTypeHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: theme.spacing.md,
+    borderLeftWidth: 4,
+    backgroundColor: theme.colors.surface,
+    marginBottom: theme.spacing.sm,
+  },
+  mealTypeInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+  },
+  mealTypeLabel: {
+    ...theme.typography.h3,
+    color: theme.colors.text,
+  },
+  mealTypeTime: {
+    ...theme.typography.caption,
+    color: theme.colors.textSecondary,
+  },
+  addButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mealCard: {
+    flexDirection: 'row',
+    backgroundColor: theme.colors.background,
+    padding: theme.spacing.md,
+    marginHorizontal: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+    borderRadius: theme.spacing.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.surface,
+  },
+  mealCardContent: {
+    flex: 1,
+  },
+  mealName: {
+    ...theme.typography.body,
+    color: theme.colors.text,
+    marginBottom: theme.spacing.xs,
+  },
+  mealPortions: {
+    ...theme.typography.caption,
+    color: theme.colors.textSecondary,
+  },
+  mealCardActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+  },
+  listDeleteButton: {
+    padding: theme.spacing.sm,
+  },
+  nutritionStats: {
+    padding: theme.spacing.md,
+    backgroundColor: theme.colors.surface,
+    marginBottom: theme.spacing.lg,
+  },
+  nutritionTitle: {
+    ...theme.typography.h2,
+    color: theme.colors.text,
+    marginBottom: theme.spacing.md,
+  },
+  nutritionGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  nutritionItem: {
+    alignItems: 'center',
+  },
+  nutritionValue: {
+    ...theme.typography.h2,
+    marginBottom: theme.spacing.xs,
+  },
+  nutritionLabel: {
+    ...theme.typography.caption,
+    color: theme.colors.textSecondary,
+  },
+  drawerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  drawerContent: {
+    backgroundColor: theme.colors.background,
+    borderTopLeftRadius: theme.spacing.lg,
+    borderTopRightRadius: theme.spacing.lg,
+    maxHeight: '80%',
+  },
+  drawerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: theme.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.surface,
+  },
+  drawerTitle: {
+    ...theme.typography.h2,
+    color: theme.colors.text,
+  },
+  drawerFooter: {
+    padding: theme.spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.surface,
+  },
+  recipeItem: {
+    padding: theme.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.surface,
+  },
+  recipeItemSelected: {
+    backgroundColor: theme.colors.surface,
+  },
+  recipeItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  recipeCheckbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: theme.colors.primary,
+    marginRight: theme.spacing.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  recipeInfo: {
+    flex: 1,
+  },
+  recipeName: {
+    ...theme.typography.body,
+    color: theme.colors.text,
+    marginBottom: theme.spacing.xs,
+  },
+  recipeDescription: {
+    ...theme.typography.caption,
+    color: theme.colors.textSecondary,
+  },
+  confirmButton: {
+    backgroundColor: theme.colors.primary,
+    padding: theme.spacing.md,
+    borderRadius: theme.spacing.sm,
+    alignItems: 'center',
+  },
+  confirmButtonDisabled: {
+    opacity: 0.5,
+  },
+  confirmButtonText: {
+    ...theme.typography.body,
+    color: theme.colors.background,
+    fontWeight: 'bold',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: theme.colors.background,
+    borderRadius: theme.spacing.lg,
+    padding: theme.spacing.lg,
+    width: '80%',
+  },
+  modalHeader: {
+    marginBottom: theme.spacing.md,
+  },
+  modalTitle: {
+    ...theme.typography.h2,
+    color: theme.colors.text,
+    textAlign: 'center',
+  },
+  modalBody: {
+    marginBottom: theme.spacing.lg,
+  },
+  modalText: {
+    ...theme.typography.body,
+    color: theme.colors.text,
+    textAlign: 'center',
+    marginBottom: theme.spacing.md,
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: theme.spacing.md,
+  },
+  modalButton: {
+    flex: 1,
+    padding: theme.spacing.md,
+    borderRadius: theme.spacing.sm,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: theme.colors.surface,
+  },
+  deleteButton: {
+    backgroundColor: theme.colors.error,
+  },
+  cancelButtonText: {
+    ...theme.typography.body,
+    color: theme.colors.text,
+  },
+  deleteButtonText: {
+    ...theme.typography.body,
+    color: theme.colors.background,
+  },
+  errorContainer: {
+    padding: theme.spacing.md,
+    alignItems: 'center',
+  },
+  errorText: {
+    ...theme.typography.body,
+    color: theme.colors.error,
+    marginBottom: theme.spacing.md,
+  },
+  retryButton: {
+    backgroundColor: theme.colors.primary,
+    padding: theme.spacing.md,
+    borderRadius: theme.spacing.sm,
+  },
+  retryButtonText: {
+    ...theme.typography.body,
+    color: theme.colors.background,
+  },
+});
 
 function SkeletonLoader() {
   const animatedValue = new Animated.Value(0);
@@ -55,31 +375,34 @@ function SkeletonLoader() {
   const renderSkeletonCard = (index: number) => (
     <Animated.View
       key={'skeleton_card' + index}
-      style={[styles.skeletonCard, { opacity }]}
+      style={[skeletonStyles.skeletonCard, { opacity }]}
     >
-      <View style={styles.skeletonContent}>
-        <View style={styles.skeletonTitle} />
-        <View style={styles.skeletonText} />
+      <View style={skeletonStyles.skeletonContent}>
+        <View style={skeletonStyles.skeletonTitle} />
+        <View style={skeletonStyles.skeletonText} />
       </View>
     </Animated.View>
   );
 
   return (
-    <View style={styles.container}>
-      <View style={styles.nutritionStats}>
-        <View style={styles.skeletonTitle} />
-        <View style={styles.nutritionGrid}>
+    <View style={skeletonStyles.container}>
+      <View style={skeletonStyles.nutritionStats}>
+        <View style={skeletonStyles.skeletonTitle} />
+        <View style={skeletonStyles.nutritionGrid}>
           {[...Array(4)].map((_, i) => (
-            <View key={'skeleton_nutrition' + i} style={styles.nutritionItem}>
-              <View style={styles.skeletonValue} />
-              <View style={styles.skeletonLabel} />
+            <View
+              key={'skeleton_nutrition' + i}
+              style={skeletonStyles.nutritionItem}
+            >
+              <View style={skeletonStyles.skeletonValue} />
+              <View style={skeletonStyles.skeletonLabel} />
             </View>
           ))}
         </View>
       </View>
-      {Object.keys(MEAL_TYPE_CONFIG).map((type) => (
-        <View key={type + 'skeleton2'} style={styles.mealSection}>
-          <View style={styles.skeletonHeader} />
+      {Object.keys(mealType_CONFIG).map((type) => (
+        <View key={type + 'skeleton2'} style={skeletonStyles.mealSection}>
+          <View style={skeletonStyles.skeletonHeader} />
           {[...Array(2)].map((_, i) => renderSkeletonCard(i))}
         </View>
       ))}
@@ -107,6 +430,7 @@ export default function MealPlanScreen() {
   const { dailyPlan, loading, error, fetchDailyPlan, deleteMeal, addMeal } =
     useMealPlanStore();
   const { recipes, loading: recipesLoading, fetchRecipes } = useRecipeStore();
+  const { themeColor } = useGlobalStore();
 
   useEffect(() => {
     if (session?.access_token) {
@@ -202,7 +526,7 @@ export default function MealPlanScreen() {
 
   // 渲染餐次标题
   const renderMealTypeHeader = (mealType: MealType) => {
-    const config = MEAL_TYPE_CONFIG[mealType as keyof typeof MEAL_TYPE_CONFIG];
+    const config = mealType_CONFIG[mealType as keyof typeof mealType_CONFIG];
     return (
       <View style={[styles.mealTypeHeader, { borderLeftColor: config.color }]}>
         <View style={styles.mealTypeInfo}>
@@ -251,41 +575,47 @@ export default function MealPlanScreen() {
   const renderNutritionStats = () => {
     if (!dailyPlan) return null;
 
-    // 计算总营养
-    const totalNutrition = Object.values(dailyPlan)
-      .flat()
-      .reduce(
-        (acc, meal) => {
-          console.log('meal', meal);
-          const { recipe } = meal;
-          return {
-            calories: acc.calories + (recipe.calories || 0),
-            protein: acc.protein + (recipe.nutrition_facts?.protein || 0),
-            carbs: acc.carbs + (recipe.nutrition_facts?.carbs || 0),
-            fat: acc.fat + (recipe.nutrition_facts?.fat || 0),
-          };
-        },
-        { calories: 0, protein: 0, carbs: 0, fat: 0 }
-      );
+    const totalNutrition = Object.values(dailyPlan).reduce(
+      (acc, meals) => {
+        meals.forEach((meal) => {
+          if (meal.recipe.nutritionFacts) {
+            acc.calories += meal.recipe.calories || 0;
+            acc.protein += meal.recipe.nutritionFacts?.protein || 0;
+            acc.carbs += meal.recipe.nutritionFacts?.carbs || 0;
+            acc.fat += meal.recipe.nutritionFacts?.fat || 0;
+          }
+        });
+        return acc;
+      },
+      { calories: 0, protein: 0, carbs: 0, fat: 0 }
+    );
 
     return (
       <View style={styles.nutritionStats}>
         <Text style={styles.nutritionTitle}>今日营养摄入</Text>
         <View style={styles.nutritionGrid}>
           <View style={styles.nutritionItem}>
-            <Text style={styles.nutritionValue}>{totalNutrition.calories}</Text>
+            <Text style={[styles.nutritionValue, { color: themeColor }]}>
+              {Math.round(totalNutrition.calories)}
+            </Text>
             <Text style={styles.nutritionLabel}>卡路里</Text>
           </View>
           <View style={styles.nutritionItem}>
-            <Text style={styles.nutritionValue}>{totalNutrition.protein}g</Text>
+            <Text style={[styles.nutritionValue, { color: themeColor }]}>
+              {Math.round(totalNutrition.protein)}g
+            </Text>
             <Text style={styles.nutritionLabel}>蛋白质</Text>
           </View>
           <View style={styles.nutritionItem}>
-            <Text style={styles.nutritionValue}>{totalNutrition.carbs}g</Text>
+            <Text style={[styles.nutritionValue, { color: themeColor }]}>
+              {Math.round(totalNutrition.carbs)}g
+            </Text>
             <Text style={styles.nutritionLabel}>碳水</Text>
           </View>
           <View style={styles.nutritionItem}>
-            <Text style={styles.nutritionValue}>{totalNutrition.fat}g</Text>
+            <Text style={[styles.nutritionValue, { color: themeColor }]}>
+              {Math.round(totalNutrition.fat)}g
+            </Text>
             <Text style={styles.nutritionLabel}>脂肪</Text>
           </View>
         </View>
@@ -464,15 +794,15 @@ export default function MealPlanScreen() {
             markedDates={{
               [selectedDate]: {
                 selected: true,
-                selectedColor: theme.colors.primary,
+                selectedColor: themeColor,
               },
             }}
             theme={{
               calendarBackground: theme.colors.background,
               textSectionTitleColor: theme.colors.textSecondary,
-              selectedDayBackgroundColor: theme.colors.primary,
+              selectedDayBackgroundColor: themeColor,
               selectedDayTextColor: theme.colors.background,
-              todayTextColor: theme.colors.primary,
+              todayTextColor: themeColor,
               dayTextColor: theme.colors.text,
               textDisabledColor: theme.colors.textSecondary,
               monthTextColor: theme.colors.text,
@@ -488,15 +818,15 @@ export default function MealPlanScreen() {
             markedDates={{
               [selectedDate]: {
                 selected: true,
-                selectedColor: theme.colors.primary,
+                selectedColor: themeColor,
               },
             }}
             theme={{
               calendarBackground: theme.colors.background,
               textSectionTitleColor: theme.colors.textSecondary,
-              selectedDayBackgroundColor: theme.colors.primary,
+              selectedDayBackgroundColor: themeColor,
               selectedDayTextColor: theme.colors.background,
-              todayTextColor: theme.colors.primary,
+              todayTextColor: themeColor,
               dayTextColor: theme.colors.text,
               textDisabledColor: theme.colors.textSecondary,
             }}
@@ -522,7 +852,7 @@ export default function MealPlanScreen() {
           <>
             {renderNutritionStats()}
             {dailyPlan &&
-              (Object.keys(MEAL_TYPE_CONFIG) as MealType[]).map((type) => (
+              (Object.keys(mealType_CONFIG) as MealType[]).map((type) => (
                 <View key={type} style={styles.mealSection}>
                   {renderMealTypeHeader(type)}
                   {dailyPlan[type].map(renderMealCard)}
@@ -537,337 +867,3 @@ export default function MealPlanScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  calendarHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.background,
-  },
-  calendarTitle: {
-    ...theme.typography.h2,
-    color: theme.colors.text,
-  },
-  viewToggle: {
-    padding: theme.spacing.sm,
-  },
-  mealList: {
-    flex: 1,
-    padding: theme.spacing.md,
-  },
-  mealSection: {
-    marginBottom: theme.spacing.lg,
-  },
-  mealTypeHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
-    borderRadius: 8,
-    borderLeftWidth: 4,
-    marginBottom: theme.spacing.sm,
-  },
-  mealTypeInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  mealTypeLabel: {
-    ...theme.typography.body,
-    color: theme.colors.text,
-    marginLeft: theme.spacing.sm,
-  },
-  mealTypeTime: {
-    ...theme.typography.caption,
-    color: theme.colors.textSecondary,
-    marginLeft: theme.spacing.sm,
-  },
-  addButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  mealCard: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.background,
-    borderRadius: 8,
-    marginBottom: theme.spacing.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.surface,
-  },
-  mealCardContent: {
-    flex: 1,
-  },
-  mealName: {
-    ...theme.typography.body,
-    color: theme.colors.text,
-  },
-  mealPortions: {
-    ...theme.typography.caption,
-    color: theme.colors.textSecondary,
-    marginTop: 2,
-  },
-  mealCardActions: {
-    flexDirection: 'row',
-    gap: theme.spacing.md,
-    marginLeft: theme.spacing.md,
-  },
-  nutritionStats: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 12,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.lg,
-  },
-  nutritionTitle: {
-    ...theme.typography.h2,
-    color: theme.colors.text,
-    marginBottom: theme.spacing.md,
-  },
-  nutritionGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  nutritionItem: {
-    alignItems: 'center',
-  },
-  nutritionValue: {
-    ...theme.typography.h2,
-    color: theme.colors.primary,
-  },
-  nutritionLabel: {
-    ...theme.typography.caption,
-    color: theme.colors.textSecondary,
-    marginTop: 2,
-  },
-  errorContainer: {
-    padding: theme.spacing.md,
-    alignItems: 'center',
-  },
-  errorText: {
-    ...theme.typography.body,
-    color: theme.colors.error,
-    marginBottom: theme.spacing.md,
-  },
-  retryButton: {
-    padding: theme.spacing.sm,
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.spacing.sm,
-  },
-  retryButtonText: {
-    ...theme.typography.body,
-    color: theme.colors.background,
-  },
-  loadingContainer: {
-    padding: theme.spacing.md,
-    alignItems: 'center',
-  },
-  loadingText: {
-    ...theme.typography.body,
-    color: theme.colors.textSecondary,
-  },
-  drawerOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  drawerContent: {
-    backgroundColor: theme.colors.background,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '80%',
-  },
-  drawerHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.surface,
-  },
-  drawerTitle: {
-    ...theme.typography.h2,
-    color: theme.colors.text,
-  },
-  recipeItem: {
-    padding: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.surface,
-  },
-  recipeItemSelected: {
-    backgroundColor: `${theme.colors.primary}10`,
-  },
-  recipeItemContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  recipeCheckbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: theme.colors.primary,
-    marginRight: theme.spacing.sm,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  recipeInfo: {
-    flex: 1,
-  },
-  drawerFooter: {
-    padding: theme.spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.surface,
-  },
-  confirmButton: {
-    backgroundColor: theme.colors.primary,
-    padding: theme.spacing.md,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  confirmButtonDisabled: {
-    backgroundColor: theme.colors.textSecondary,
-  },
-  confirmButtonText: {
-    ...theme.typography.body,
-    color: theme.colors.background,
-    fontWeight: 'bold',
-  },
-  recipeName: {
-    ...theme.typography.body,
-    color: theme.colors.text,
-    marginBottom: 4,
-  },
-  recipeDescription: {
-    ...theme.typography.caption,
-    color: theme.colors.textSecondary,
-  },
-  skeletonCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 8,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
-  },
-  skeletonContent: {
-    gap: theme.spacing.sm,
-  },
-  skeletonTitle: {
-    height: 20,
-    backgroundColor: theme.colors.surface,
-    borderRadius: 4,
-    width: '60%',
-  },
-  skeletonText: {
-    height: 16,
-    backgroundColor: theme.colors.surface,
-    borderRadius: 4,
-    width: '40%',
-  },
-  skeletonHeader: {
-    height: 48,
-    backgroundColor: theme.colors.surface,
-    borderRadius: 8,
-    marginBottom: theme.spacing.sm,
-  },
-  skeletonValue: {
-    height: 24,
-    width: 48,
-    backgroundColor: theme.colors.surface,
-    borderRadius: 4,
-    marginBottom: 4,
-  },
-  skeletonLabel: {
-    height: 16,
-    width: 32,
-    backgroundColor: theme.colors.surface,
-    borderRadius: 4,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: theme.spacing.lg,
-  },
-  modalContent: {
-    backgroundColor: theme.colors.background,
-    borderRadius: 12,
-    width: '100%',
-    maxWidth: 320,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  modalHeader: {
-    padding: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.surface,
-  },
-  modalTitle: {
-    ...theme.typography.h2,
-    color: theme.colors.text,
-    textAlign: 'center',
-  },
-  modalBody: {
-    padding: theme.spacing.lg,
-    alignItems: 'center',
-  },
-  modalText: {
-    ...theme.typography.body,
-    color: theme.colors.text,
-    marginBottom: theme.spacing.md,
-    textAlign: 'center',
-  },
-  modalFooter: {
-    flexDirection: 'row',
-    padding: theme.spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.surface,
-    justifyContent: 'space-between',
-    gap: theme.spacing.md,
-  },
-  modalButton: {
-    flex: 1,
-    padding: theme.spacing.md,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelButton: {
-    backgroundColor: theme.colors.surface,
-  },
-  deleteButton: {
-    backgroundColor: theme.colors.error,
-  },
-  cancelButtonText: {
-    ...theme.typography.body,
-    color: theme.colors.text,
-  },
-  deleteButtonText: {
-    ...theme.typography.body,
-    color: theme.colors.background,
-  },
-  listDeleteButton: {
-    padding: theme.spacing.md,
-    justifyContent: 'center',
-    alignItems: 'center',
-    minWidth: 48,
-    minHeight: 48,
-  },
-});

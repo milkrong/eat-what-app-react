@@ -33,8 +33,74 @@ const PreferencesScreen = () => {
     preferences,
     loading: preferencesLoading,
     updatePreferences,
+    themeColor,
   } = useGlobalStore();
   const [saving, setSaving] = useState(false);
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    content: {
+      flex: 1,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: theme.spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.surface,
+    },
+    backButton: {
+      padding: theme.spacing.sm,
+      marginLeft: -theme.spacing.sm,
+    },
+    title: {
+      ...theme.typography.h2,
+      color: theme.colors.text,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    scrollView: {
+      flex: 1,
+      padding: theme.spacing.md,
+    },
+    bottomPadding: {
+      height: 120,
+    },
+    fixedBottomContainer: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      backgroundColor: theme.colors.background,
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.surface,
+      padding: theme.spacing.md,
+      paddingBottom: theme.spacing.lg,
+    },
+    saveButton: {
+      backgroundColor: themeColor,
+      padding: theme.spacing.md,
+      borderRadius: theme.spacing.sm,
+      alignItems: 'center',
+      flexDirection: 'row',
+      justifyContent: 'center',
+    },
+    saveButtonText: {
+      color: theme.colors.background,
+      ...theme.typography.body,
+      fontWeight: 'bold',
+    },
+    disabledButton: {
+      opacity: 0.5,
+    },
+  });
 
   const handleSave = async () => {
     if (!preferences || saving) return;
@@ -182,70 +248,5 @@ const PreferencesScreen = () => {
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  content: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.surface,
-  },
-  backButton: {
-    padding: theme.spacing.sm,
-    marginLeft: -theme.spacing.sm,
-  },
-  title: {
-    ...theme.typography.h2,
-    color: theme.colors.text,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  scrollView: {
-    flex: 1,
-    padding: theme.spacing.md,
-  },
-  bottomPadding: {
-    height: 120,
-  },
-  fixedBottomContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: theme.colors.background,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.surface,
-    padding: theme.spacing.md,
-    paddingBottom: theme.spacing.lg,
-  },
-  saveButton: {
-    backgroundColor: theme.colors.primary,
-    padding: theme.spacing.md,
-    borderRadius: theme.spacing.sm,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  saveButtonText: {
-    color: theme.colors.background,
-    ...theme.typography.body,
-    fontWeight: 'bold',
-  },
-  disabledButton: {
-    opacity: 0.5,
-  },
-});
 
 export default PreferencesScreen;

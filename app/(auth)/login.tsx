@@ -1,125 +1,195 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
+  StyleSheet,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  Alert,
+  ActivityIndicator,
+  Image,
 } from 'react-native';
-import { router } from 'expo-router';
-import { useAuthStore } from '@/stores/useAuthStore';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '@/theme';
+import { useAuthStore } from '@/stores/useAuthStore';
+import { router } from 'expo-router';
+import Toast, { useToastStore } from '@/components/Toast';
 
-export default function LoginScreen() {
-  console.log(
-    typeof process.env.EXPO_PUBLIC_DEV_MODE,
-    process.env.EXPO_PUBLIC_DEV_MODE
-  );
-  const [email, setEmail] = React.useState(
-    process.env.EXPO_PUBLIC_DEV_MODE
-      ? process.env.EMAIL || 'milkrong121@outlook.com'
-      : 'milkrong121@outlook.com'
-  );
-  const [password, setPassword] = React.useState(
-    process.env.EXPO_PUBLIC_DEV_MODE
-      ? process.env.PASSWORD || 'Milkkai5315!?!'
-      : 'Milkkai5315!?!'
-  );
-
+const LoginScreen = () => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const { login, loading } = useAuthStore();
+  const { showToast } = useToastStore();
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: '#FFFFFF',
+    },
+    content: {
+      flex: 1,
+      padding: 24,
+      justifyContent: 'center',
+    },
+    header: {
+      alignItems: 'center',
+      marginBottom: 48,
+    },
+    logo: {
+      width: 80,
+      height: 80,
+      marginBottom: 16,
+    },
+    title: {
+      fontSize: 28,
+      fontWeight: '600',
+      color: '#1A1A1A',
+      marginBottom: 8,
+    },
+    subtitle: {
+      fontSize: 16,
+      color: '#666666',
+      textAlign: 'center',
+      marginBottom: 32,
+    },
+    inputContainer: {
+      marginBottom: 24,
+    },
+    label: {
+      fontSize: 14,
+      color: '#1A1A1A',
+      marginBottom: 8,
+    },
+    input: {
+      backgroundColor: '#F5F5F5',
+      borderRadius: 8,
+      padding: 16,
+      fontSize: 16,
+      color: '#1A1A1A',
+      borderWidth: 1,
+      borderColor: '#E0E0E0',
+    },
+    inputFocused: {
+      borderColor: '#666666',
+    },
+    loginButton: {
+      backgroundColor: '#1A1A1A',
+      borderRadius: 8,
+      padding: 16,
+      alignItems: 'center',
+      marginTop: 16,
+    },
+    loginButtonDisabled: {
+      backgroundColor: '#E0E0E0',
+    },
+    loginButtonText: {
+      color: '#FFFFFF',
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    forgotPassword: {
+      alignItems: 'center',
+      marginTop: 16,
+    },
+    forgotPasswordText: {
+      color: '#666666',
+      fontSize: 14,
+    },
+    footer: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      marginTop: 32,
+    },
+    footerText: {
+      color: '#666666',
+      fontSize: 14,
+    },
+    signupButton: {
+      marginLeft: 4,
+    },
+    signupButtonText: {
+      color: '#1A1A1A',
+      fontSize: 14,
+      fontWeight: '600',
+    },
+  });
 
   const handleLogin = async () => {
+    if (!email || !password) {
+      showToast('请输入邮箱和密码', 'error');
+      return;
+    }
+
     try {
       await login({ email, password });
-      router.replace('/(tabs)');
+      router.replace('/(tabs)' as any);
     } catch (error) {
-      Alert.alert('错误', '登录失败，请检查邮箱和密码是否正确');
+      showToast('登录失败', 'error');
     }
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>登录</Text>
-      <View style={styles.form}>
-        <TextInput
-          style={styles.input}
-          placeholder="邮箱"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="密码"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
+    <SafeAreaView style={styles.container}>
+      <View style={styles.content}>
+        <View style={styles.header}>
+          <Image
+            source={require('../../assets/images/icon.png')}
+            style={styles.logo}
+          />
+          <Text style={styles.title}>欢迎回来</Text>
+          <Text style={styles.subtitle}>登录你的账号以继续使用</Text>
+        </View>
+
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>邮箱</Text>
+          <TextInput
+            style={styles.input}
+            value={email}
+            onChangeText={setEmail}
+            placeholder="请输入邮箱"
+            placeholderTextColor="#999999"
+            autoCapitalize="none"
+            keyboardType="email-address"
+          />
+        </View>
+
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>密码</Text>
+          <TextInput
+            style={styles.input}
+            value={password}
+            onChangeText={setPassword}
+            placeholder="请输入密码"
+            placeholderTextColor="#999999"
+            secureTextEntry
+          />
+        </View>
+
         <TouchableOpacity
-          style={styles.button}
+          style={[styles.loginButton, loading && styles.loginButtonDisabled]}
           onPress={handleLogin}
           disabled={loading}
         >
-          <Text style={styles.buttonText}>
-            {loading ? '登录中...' : '登录'}
-          </Text>
+          {loading ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.loginButtonText}>登录</Text>
+          )}
         </TouchableOpacity>
-      </View>
-      <TouchableOpacity
-        style={styles.registerLink}
-        onPress={() => router.push('/register')}
-      >
-        <Text style={styles.registerText}>还没有账号？立即注册</Text>
-      </TouchableOpacity>
-    </View>
-  );
-}
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: theme.spacing.lg,
-    justifyContent: 'center',
-    backgroundColor: theme.colors.background,
-  },
-  title: {
-    ...theme.typography.h1,
-    color: theme.colors.text,
-    marginBottom: theme.spacing.xl,
-    textAlign: 'center',
-  },
-  form: {
-    gap: theme.spacing.md,
-  },
-  input: {
-    backgroundColor: theme.colors.surface,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: 12,
-    fontSize: 16,
-    height: 48,
-    color: theme.colors.text,
-  },
-  button: {
-    backgroundColor: theme.colors.primary,
-    padding: theme.spacing.md,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: theme.spacing.sm,
-  },
-  buttonText: {
-    ...theme.typography.body,
-    color: theme.colors.background,
-    fontWeight: 'bold',
-  },
-  registerLink: {
-    marginTop: theme.spacing.xl,
-    alignItems: 'center',
-  },
-  registerText: {
-    ...theme.typography.body,
-    color: theme.colors.primary,
-  },
-});
+        <TouchableOpacity style={styles.forgotPassword}>
+          <Text style={styles.forgotPasswordText}>忘记密码？</Text>
+        </TouchableOpacity>
+
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>还没有账号？</Text>
+          <TouchableOpacity style={styles.signupButton}>
+            <Text style={styles.signupButtonText}>立即注册</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+      <Toast />
+    </SafeAreaView>
+  );
+};
+
+export default LoginScreen;

@@ -171,7 +171,7 @@ Authorization: Bearer {{auth_token}}
 
 {
   "date": "2024-01-01T12:00:00Z",
-  "meal_type": "lunch",
+  "mealType": "lunch",
   "recipe_id": "recipe_1"
 }
 
@@ -181,7 +181,7 @@ Content-Type: application/json
 Authorization: Bearer {{auth_token}}
 
 {
-  "meal_type": "dinner"
+  "mealType": "dinner"
 }
 
 ### 删除餐饮计划（需要认证）

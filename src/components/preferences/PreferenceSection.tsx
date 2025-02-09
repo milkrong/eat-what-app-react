@@ -9,6 +9,9 @@ import {
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { theme } from '@/theme';
+import { useGlobalStore } from '@/stores/useGlobalStore';
+
+const ACTIVE_COLOR = '#FF9500';
 
 interface PreferenceSectionProps {
   title: string;
@@ -25,6 +28,7 @@ export const PreferenceSection: React.FC<PreferenceSectionProps> = ({
   onValueChange,
   allowCustom = true,
 }) => {
+  const { themeColor } = useGlobalStore();
   const [isExpanded, setIsExpanded] = useState(true);
   const [customValue, setCustomValue] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
@@ -40,6 +44,108 @@ export const PreferenceSection: React.FC<PreferenceSectionProps> = ({
   const handleRemoveValue = (value: string) => {
     onValueChange(selectedValues.filter((v) => v !== value));
   };
+
+  const styles = StyleSheet.create({
+    preferenceSection: {
+      marginBottom: theme.spacing.lg,
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.spacing.sm,
+      overflow: 'hidden',
+    },
+    sectionHeader: {
+      padding: theme.spacing.md,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    sectionTitle: {
+      ...theme.typography.h2,
+      color: theme.colors.text,
+    },
+    sectionContent: {
+      padding: 8,
+    },
+    selectedChips: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: theme.spacing.xs,
+      marginBottom: theme.spacing.sm,
+    },
+    selectedChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: `${themeColor}20`,
+      paddingVertical: theme.spacing.xs,
+      paddingHorizontal: theme.spacing.sm,
+      borderRadius: theme.spacing.sm,
+      gap: theme.spacing.xs,
+    },
+    selectedChipText: {
+      ...theme.typography.caption,
+      color: themeColor,
+    },
+    removeChip: {
+      padding: 2,
+    },
+    optionsScroll: {
+      marginHorizontal: -theme.spacing.md,
+    },
+    optionsContent: {
+      padding: theme.spacing.md,
+      gap: theme.spacing.sm,
+    },
+    optionChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.colors.background,
+      paddingVertical: theme.spacing.xs,
+      paddingHorizontal: theme.spacing.sm,
+      borderRadius: theme.spacing.sm,
+      gap: theme.spacing.xs,
+      borderWidth: 1,
+      borderColor: theme.colors.surface,
+    },
+    optionChipSelected: {
+      backgroundColor: `${themeColor}20`,
+      borderColor: themeColor,
+    },
+    optionChipText: {
+      ...theme.typography.caption,
+      color: theme.colors.text,
+    },
+    optionChipTextSelected: {
+      color: themeColor,
+    },
+    addCustomChip: {
+      borderStyle: 'dashed',
+      borderColor: themeColor,
+    },
+    customInputContainer: {
+      flexDirection: 'row',
+      gap: theme.spacing.sm,
+      marginTop: theme.spacing.sm,
+    },
+    customInput: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+      paddingVertical: theme.spacing.sm,
+      paddingHorizontal: theme.spacing.md,
+      borderRadius: theme.spacing.sm,
+      color: theme.colors.text,
+      ...theme.typography.body,
+    },
+    customInputButton: {
+      backgroundColor: themeColor,
+      paddingHorizontal: theme.spacing.md,
+      borderRadius: theme.spacing.sm,
+      justifyContent: 'center',
+    },
+    customInputButtonText: {
+      color: theme.colors.background,
+      ...theme.typography.body,
+      fontWeight: 'bold',
+    },
+  });
 
   return (
     <View style={styles.preferenceSection}>
@@ -153,105 +259,3 @@ export const PreferenceSection: React.FC<PreferenceSectionProps> = ({
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  preferenceSection: {
-    marginBottom: theme.spacing.lg,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.spacing.sm,
-    overflow: 'hidden',
-  },
-  sectionHeader: {
-    padding: theme.spacing.md,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  sectionTitle: {
-    ...theme.typography.h2,
-    color: theme.colors.text,
-  },
-  sectionContent: {
-    padding: 8,
-  },
-  selectedChips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: theme.spacing.xs,
-    marginBottom: theme.spacing.sm,
-  },
-  selectedChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.primary + '20',
-    paddingVertical: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.sm,
-    borderRadius: theme.spacing.sm,
-    gap: theme.spacing.xs,
-  },
-  selectedChipText: {
-    ...theme.typography.caption,
-    color: theme.colors.primary,
-  },
-  removeChip: {
-    padding: 2,
-  },
-  optionsScroll: {
-    marginHorizontal: -theme.spacing.md,
-  },
-  optionsContent: {
-    padding: theme.spacing.md,
-    gap: theme.spacing.sm,
-  },
-  optionChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.background,
-    paddingVertical: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.sm,
-    borderRadius: theme.spacing.sm,
-    gap: theme.spacing.xs,
-    borderWidth: 1,
-    borderColor: theme.colors.surface,
-  },
-  optionChipSelected: {
-    backgroundColor: theme.colors.primary + '20',
-    borderColor: theme.colors.primary,
-  },
-  optionChipText: {
-    ...theme.typography.caption,
-    color: theme.colors.text,
-  },
-  optionChipTextSelected: {
-    color: theme.colors.primary,
-  },
-  addCustomChip: {
-    borderStyle: 'dashed',
-    borderColor: theme.colors.primary,
-  },
-  customInputContainer: {
-    flexDirection: 'row',
-    gap: theme.spacing.sm,
-    marginTop: theme.spacing.sm,
-  },
-  customInput: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.spacing.sm,
-    color: theme.colors.text,
-    ...theme.typography.body,
-  },
-  customInputButton: {
-    backgroundColor: theme.colors.primary,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.spacing.sm,
-    justifyContent: 'center',
-  },
-  customInputButtonText: {
-    color: theme.colors.background,
-    ...theme.typography.body,
-    fontWeight: 'bold',
-  },
-});

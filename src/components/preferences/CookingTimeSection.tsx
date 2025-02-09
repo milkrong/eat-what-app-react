@@ -9,6 +9,8 @@ import {
 import { FontAwesome } from '@expo/vector-icons';
 import { theme } from '@/theme';
 
+const ACTIVE_COLOR = '#FF9500';
+
 const COOKING_TIME_PRESETS = [
   { label: '快速料理', time: 15 },
   { label: '一般料理', time: 30 },
@@ -99,7 +101,7 @@ export const CookingTimeSection: React.FC<CookingTimeSectionProps> = ({
               style={styles.customTimeButton}
               onPress={() => setShowCustomInput(true)}
             >
-              <FontAwesome name="plus" size={14} color={theme.colors.primary} />
+              <FontAwesome name="plus" size={14} color={ACTIVE_COLOR} />
               <Text style={styles.customTimeButtonText}>自定义时间</Text>
             </TouchableOpacity>
           ) : (
@@ -180,22 +182,22 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.surface,
   },
   cookingTimePresetButtonActive: {
-    backgroundColor: theme.colors.primary + '20',
-    borderColor: theme.colors.primary,
+    backgroundColor: `${ACTIVE_COLOR}20`,
+    borderColor: ACTIVE_COLOR,
   },
   cookingTimePresetText: {
     ...theme.typography.body,
     color: theme.colors.text,
   },
   cookingTimePresetTextActive: {
-    color: theme.colors.primary,
+    color: ACTIVE_COLOR,
   },
   cookingTimePresetValue: {
     ...theme.typography.caption,
     color: theme.colors.textSecondary,
   },
   cookingTimePresetValueActive: {
-    color: theme.colors.primary,
+    color: ACTIVE_COLOR,
   },
   customTimeButton: {
     flexDirection: 'row',
@@ -207,11 +209,11 @@ const styles = StyleSheet.create({
     borderRadius: theme.spacing.sm,
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: theme.colors.primary,
+    borderColor: ACTIVE_COLOR,
   },
   customTimeButtonText: {
     ...theme.typography.body,
-    color: theme.colors.primary,
+    color: ACTIVE_COLOR,
   },
   customTimeInputContainer: {
     marginTop: theme.spacing.sm,
@@ -250,7 +252,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surface,
   },
   customTimeConfirm: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: ACTIVE_COLOR,
   },
   customTimeCancelText: {
     ...theme.typography.body,

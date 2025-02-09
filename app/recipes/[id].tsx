@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   Image,
   TouchableOpacity,
   Dimensions,
@@ -18,7 +17,9 @@ import { FontAwesome } from '@expo/vector-icons';
 import { theme } from '../../src/theme';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useRecipeStore } from '@/stores/useRecipeStore';
-
+import { useGlobalStore } from '@/stores/useGlobalStore';
+import { useMealPlanStore } from '@/stores/useMealPlanStore';
+import { MealType } from '@/types/meal-plan';
 
 interface Step {
   order: number;
@@ -26,93 +27,8 @@ interface Step {
   image_url?: string;
 }
 
-
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const IMAGE_HEIGHT = SCREEN_WIDTH * 0.75;
-
-const RecipeDetailSkeleton = () => (
-  <View style={styles.container}>
-    <View style={styles.imageContainer}>
-      <SkeletonLoader width={SCREEN_WIDTH} height={IMAGE_HEIGHT} />
-    </View>
-    <View style={[styles.content, { paddingHorizontal: theme.spacing.md }]}>
-      <View style={styles.header}>
-        <SkeletonLoader
-          width={200}
-          height={32}
-          style={{ marginBottom: theme.spacing.sm }}
-        />
-        <SkeletonLoader
-          width={SCREEN_WIDTH - theme.spacing.md * 2}
-          height={48}
-          style={{ marginBottom: theme.spacing.md }}
-        />
-        <View style={styles.metrics}>
-          <SkeletonLoader width={80} height={24} />
-          <SkeletonLoader width={80} height={24} />
-          <SkeletonLoader width={80} height={24} />
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <SkeletonLoader
-          width={120}
-          height={24}
-          style={{ marginBottom: theme.spacing.md }}
-        />
-        <View style={styles.nutritionGrid}>
-          {[1, 2, 3, 4].map((i) => (
-            <View key={i} style={styles.nutritionItem}>
-              <SkeletonLoader
-                width={60}
-                height={32}
-                style={{ marginBottom: theme.spacing.xs }}
-              />
-              <SkeletonLoader width={40} height={16} />
-            </View>
-          ))}
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <SkeletonLoader
-          width={120}
-          height={24}
-          style={{ marginBottom: theme.spacing.md }}
-        />
-        {[1, 2, 3, 4].map((i) => (
-          <View key={i} style={styles.ingredientItem}>
-            <SkeletonLoader width={120} height={20} />
-            <SkeletonLoader width={80} height={20} />
-          </View>
-        ))}
-      </View>
-
-      <View style={styles.section}>
-        <SkeletonLoader
-          width={120}
-          height={24}
-          style={{ marginBottom: theme.spacing.md }}
-        />
-        {[1, 2, 3].map((i) => (
-          <View key={i} style={styles.stepItem}>
-            <View style={styles.stepHeader}>
-              <SkeletonLoader
-                width={24}
-                height={24}
-                style={{ borderRadius: 12, marginRight: theme.spacing.sm }}
-              />
-              <SkeletonLoader
-                width={SCREEN_WIDTH - theme.spacing.md * 4 - 24}
-                height={48}
-              />
-            </View>
-          </View>
-        ))}
-      </View>
-    </View>
-  </View>
-);
 
 const SkeletonLoader = ({
   width,
@@ -163,7 +79,7 @@ const SkeletonLoader = ({
   );
 };
 
-const MEAL_TYPES = [
+const mealTypeS: { id: MealType; name: string }[] = [
   { id: 'breakfast', name: '早餐' },
   { id: 'lunch', name: '午餐' },
   { id: 'dinner', name: '晚餐' },
@@ -175,8 +91,11 @@ export default function RecipeDetailScreen() {
   const { session } = useAuthStore();
   const { currentRecipe, loading, error, fetchRecipeById, toggleFavorite } =
     useRecipeStore();
+  const { themeColor } = useGlobalStore();
   const [showMealPlanModal, setShowMealPlanModal] = useState(false);
-  const [selectedMealType, setSelectedMealType] = useState<string | null>(null);
+  const [selectedMealType, setSelectedMealType] = useState<MealType | null>(
+    null
+  );
   const [dateInput, setDateInput] = useState(() => {
     const today = new Date();
     const year = today.getFullYear();
@@ -184,6 +103,373 @@ export default function RecipeDetailScreen() {
     const day = String(today.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   });
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    loadingText: {
+      ...theme.typography.body,
+      color: theme.colors.textSecondary,
+    },
+    headerButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: 'rgba(0, 0, 0, 0.3)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginHorizontal: 4,
+    },
+    headerButtonActive: {
+      backgroundColor: theme.colors.background,
+    },
+    backButton: {
+      backgroundColor: 'rgba(0, 0, 0, 0.3)',
+      marginLeft: 16,
+    },
+    headerButtons: {
+      flexDirection: 'row',
+    },
+    imageContainer: {
+      height: IMAGE_HEIGHT,
+      overflow: 'hidden',
+    },
+    imageWrapper: {
+      height: IMAGE_HEIGHT,
+      width: '100%',
+    },
+    image: {
+      width: SCREEN_WIDTH,
+      height: IMAGE_HEIGHT,
+    },
+    imagePlaceholder: {
+      width: SCREEN_WIDTH,
+      height: IMAGE_HEIGHT,
+      backgroundColor: theme.colors.surface,
+    },
+    content: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+      borderTopLeftRadius: theme.spacing.lg,
+      borderTopRightRadius: theme.spacing.lg,
+      marginTop: -theme.spacing.lg,
+      paddingTop: theme.spacing.lg,
+    },
+    header: {
+      padding: theme.spacing.md,
+    },
+    title: {
+      ...theme.typography.h1,
+      color: theme.colors.text,
+      marginBottom: theme.spacing.xs,
+    },
+    description: {
+      ...theme.typography.body,
+      color: theme.colors.textSecondary,
+      marginBottom: theme.spacing.md,
+    },
+    metrics: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      paddingVertical: theme.spacing.md,
+      borderTopWidth: 1,
+      borderBottomWidth: 1,
+      borderColor: theme.colors.surface,
+    },
+    metricItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.xs,
+    },
+    metricValue: {
+      ...theme.typography.body,
+      color: theme.colors.text,
+    },
+    section: {
+      padding: theme.spacing.md,
+      borderTopWidth: 8,
+      borderTopColor: theme.colors.surface,
+    },
+    sectionTitle: {
+      ...theme.typography.h2,
+      color: theme.colors.text,
+      marginBottom: theme.spacing.md,
+    },
+    nutritionGrid: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      flexWrap: 'wrap',
+    },
+    nutritionItem: {
+      alignItems: 'center',
+      minWidth: '25%',
+    },
+    nutritionValue: {
+      ...theme.typography.h2,
+      color: theme.colors.text,
+    },
+    nutritionLabel: {
+      ...theme.typography.caption,
+      color: theme.colors.textSecondary,
+    },
+    ingredientGroup: {
+      marginBottom: theme.spacing.md,
+    },
+    ingredientGroupTitle: {
+      ...theme.typography.h3,
+      color: theme.colors.text,
+      marginBottom: theme.spacing.sm,
+    },
+    ingredientItem: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: theme.spacing.xs,
+    },
+    ingredientName: {
+      ...theme.typography.body,
+      color: theme.colors.text,
+    },
+    ingredientAmount: {
+      ...theme.typography.body,
+      color: theme.colors.textSecondary,
+    },
+    stepItem: {
+      marginBottom: theme.spacing.md,
+    },
+    stepHeader: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      marginBottom: theme.spacing.sm,
+    },
+    stepNumber: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: themeColor,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: theme.spacing.sm,
+      marginTop: 2,
+    },
+    stepNumberText: {
+      ...theme.typography.caption,
+      color: theme.colors.background,
+      fontWeight: 'bold',
+    },
+    stepDescription: {
+      flex: 1,
+      ...theme.typography.body,
+      color: theme.colors.text,
+    },
+    stepImage: {
+      width: '100%',
+      height: 200,
+      borderRadius: theme.spacing.sm,
+      marginTop: theme.spacing.sm,
+    },
+    errorText: {
+      ...theme.typography.body,
+      color: theme.colors.error,
+      marginBottom: theme.spacing.md,
+    },
+    retryButton: {
+      padding: 12,
+      borderRadius: 20,
+      backgroundColor: themeColor,
+      alignItems: 'center',
+    },
+    retryButtonText: {
+      ...theme.typography.body,
+      color: theme.colors.background,
+      fontWeight: 'bold',
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'flex-end',
+    },
+    modalContent: {
+      backgroundColor: theme.colors.background,
+      borderTopLeftRadius: theme.spacing.lg,
+      borderTopRightRadius: theme.spacing.lg,
+      padding: theme.spacing.lg,
+    },
+    modalTitle: {
+      ...theme.typography.h2,
+      color: theme.colors.text,
+      marginBottom: theme.spacing.lg,
+      textAlign: 'center',
+    },
+    modalLabel: {
+      ...theme.typography.body,
+      color: theme.colors.text,
+      marginBottom: theme.spacing.sm,
+    },
+    mealTypeContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: theme.spacing.lg,
+    },
+    mealTypeButton: {
+      flex: 1,
+      padding: theme.spacing.sm,
+      borderRadius: theme.spacing.sm,
+      backgroundColor: theme.colors.surface,
+      marginHorizontal: theme.spacing.xs,
+      alignItems: 'center',
+    },
+    mealTypeButtonActive: {
+      backgroundColor: themeColor,
+    },
+    mealTypeText: {
+      ...theme.typography.body,
+      color: theme.colors.text,
+    },
+    mealTypeTextActive: {
+      color: theme.colors.background,
+    },
+    modalActions: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginTop: theme.spacing.lg,
+    },
+    modalButton: {
+      flex: 1,
+      padding: theme.spacing.sm,
+      borderRadius: theme.spacing.sm,
+      marginHorizontal: theme.spacing.xs,
+      alignItems: 'center',
+    },
+    cancelButton: {
+      backgroundColor: theme.colors.surface,
+    },
+    confirmButton: {
+      backgroundColor: themeColor,
+    },
+    cancelButtonText: {
+      ...theme.typography.body,
+      color: theme.colors.text,
+    },
+    confirmButtonText: {
+      ...theme.typography.body,
+      color: theme.colors.background,
+    },
+    addToMealPlanButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: themeColor,
+      padding: theme.spacing.sm,
+      borderRadius: theme.spacing.sm,
+      marginTop: theme.spacing.md,
+      gap: theme.spacing.sm,
+    },
+    addToMealPlanText: {
+      ...theme.typography.body,
+      color: theme.colors.background,
+      fontWeight: 'bold',
+    },
+    dateInput: {
+      backgroundColor: theme.colors.surface,
+      padding: theme.spacing.sm,
+      borderRadius: theme.spacing.sm,
+      color: theme.colors.text,
+      marginBottom: theme.spacing.md,
+      fontSize: 16,
+    },
+  });
+
+  const RecipeDetailSkeleton = () => (
+    <View style={styles.container}>
+      <View style={styles.imageContainer}>
+        <SkeletonLoader width={SCREEN_WIDTH} height={IMAGE_HEIGHT} />
+      </View>
+      <View style={[styles.content, { paddingHorizontal: theme.spacing.md }]}>
+        <View style={styles.header}>
+          <SkeletonLoader
+            width={200}
+            height={32}
+            style={{ marginBottom: theme.spacing.sm }}
+          />
+          <SkeletonLoader
+            width={SCREEN_WIDTH - theme.spacing.md * 2}
+            height={48}
+            style={{ marginBottom: theme.spacing.md }}
+          />
+          <View style={styles.metrics}>
+            <SkeletonLoader width={80} height={24} />
+            <SkeletonLoader width={80} height={24} />
+            <SkeletonLoader width={80} height={24} />
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <SkeletonLoader
+            width={120}
+            height={24}
+            style={{ marginBottom: theme.spacing.md }}
+          />
+          <View style={styles.nutritionGrid}>
+            {[1, 2, 3, 4].map((i) => (
+              <View key={i} style={styles.nutritionItem}>
+                <SkeletonLoader
+                  width={60}
+                  height={32}
+                  style={{ marginBottom: theme.spacing.xs }}
+                />
+                <SkeletonLoader width={40} height={16} />
+              </View>
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <SkeletonLoader
+            width={120}
+            height={24}
+            style={{ marginBottom: theme.spacing.md }}
+          />
+          {[1, 2, 3, 4].map((i) => (
+            <View key={i} style={styles.ingredientItem}>
+              <SkeletonLoader width={120} height={20} />
+              <SkeletonLoader width={80} height={20} />
+            </View>
+          ))}
+        </View>
+
+        <View style={styles.section}>
+          <SkeletonLoader
+            width={120}
+            height={24}
+            style={{ marginBottom: theme.spacing.md }}
+          />
+          {[1, 2, 3].map((i) => (
+            <View key={i} style={styles.stepItem}>
+              <View style={styles.stepHeader}>
+                <SkeletonLoader
+                  width={24}
+                  height={24}
+                  style={{ borderRadius: 12, marginRight: theme.spacing.sm }}
+                />
+                <SkeletonLoader
+                  width={SCREEN_WIDTH - theme.spacing.md * 4 - 24}
+                  height={48}
+                />
+              </View>
+            </View>
+          ))}
+        </View>
+      </View>
+    </View>
+  );
 
   React.useEffect(() => {
     if (!session?.access_token || !id) return;
@@ -242,24 +528,9 @@ export default function RecipeDetailScreen() {
     if (!selectedMealType || !currentRecipe || !dateInput) return;
 
     try {
-      const formattedDate = `${dateInput}T12:00:00Z`;
-      const response = await fetch(
-        `${process.env.EXPO_PUBLIC_API_URL}/meal-plans`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${session?.access_token}`,
-          },
-          body: JSON.stringify({
-            date: formattedDate,
-            meal_type: selectedMealType,
-            recipe_id: currentRecipe.id,
-          }),
-        }
-      );
-
-      if (!response.ok) throw new Error('添加到餐饮计划失败');
+      await useMealPlanStore
+        .getState()
+        .addMeal(dateInput, selectedMealType, currentRecipe.id);
 
       Alert.alert('成功', '已添加到餐饮计划');
       setShowMealPlanModal(false);
@@ -293,7 +564,7 @@ export default function RecipeDetailScreen() {
 
           <Text style={styles.modalLabel}>选择餐点</Text>
           <View style={styles.mealTypeContainer}>
-            {MEAL_TYPES.map((type) => (
+            {mealTypeS.map((type) => (
               <TouchableOpacity
                 key={type.id}
                 style={[
@@ -372,11 +643,7 @@ export default function RecipeDetailScreen() {
               style={[styles.headerButton, styles.backButton]}
               onPress={() => router.back()}
             >
-              <FontAwesome
-                name="arrow-left"
-                size={24}
-                color={theme.colors.primary}
-              />
+              <FontAwesome name="arrow-left" size={24} color={themeColor} />
             </TouchableOpacity>
           ),
           headerRight: () => (
@@ -394,16 +661,16 @@ export default function RecipeDetailScreen() {
               <TouchableOpacity
                 style={[
                   styles.headerButton,
-                  currentRecipe?.is_favorite && styles.headerButtonActive,
+                  currentRecipe?.isFavorite && styles.headerButtonActive,
                 ]}
                 onPress={handleToggleFavorite}
               >
                 <FontAwesome
-                  name={currentRecipe?.is_favorite ? 'heart' : 'heart-o'}
+                  name={currentRecipe?.isFavorite ? 'heart' : 'heart-o'}
                   size={20}
                   color={
-                    currentRecipe?.is_favorite
-                      ? theme.colors.primary
+                    currentRecipe?.isFavorite
+                      ? themeColor
                       : theme.colors.background
                   }
                 />
@@ -450,16 +717,13 @@ export default function RecipeDetailScreen() {
             <Text style={styles.description}>{currentRecipe.description}</Text>
             <View style={styles.metrics}>
               <View style={styles.metricItem}>
-                <FontAwesome
-                  name="clock-o"
-                  size={20}
-                  color={theme.colors.primary}
-                />
+                <FontAwesome name="clock-o" size={20} color={themeColor} />
                 <Text style={styles.metricValue}>
-                  {currentRecipe.cooking_time}分钟
+                  {currentRecipe.cookingTime}分钟
                 </Text>
               </View>
             </View>
+
             <TouchableOpacity
               style={styles.addToMealPlanButton}
               onPress={() => setShowMealPlanModal(true)}
@@ -483,23 +747,25 @@ export default function RecipeDetailScreen() {
                 </Text>
                 <Text style={styles.nutritionLabel}>卡路里</Text>
               </View>
-              {currentRecipe.nutrition_facts && (
+              {currentRecipe.nutritionFacts && (
                 <>
                   <View style={styles.nutritionItem}>
                     <Text style={styles.nutritionValue}>
-                      {currentRecipe.nutrition_facts.protein}g
+                      {currentRecipe.nutritionFacts.protein}g
                     </Text>
                     <Text style={styles.nutritionLabel}>蛋白质</Text>
                   </View>
+
                   <View style={styles.nutritionItem}>
                     <Text style={styles.nutritionValue}>
-                      {currentRecipe.nutrition_facts.carbs}g
+                      {currentRecipe.nutritionFacts.carbs}g
                     </Text>
                     <Text style={styles.nutritionLabel}>碳水</Text>
                   </View>
+
                   <View style={styles.nutritionItem}>
                     <Text style={styles.nutritionValue}>
-                      {currentRecipe.nutrition_facts.fat}g
+                      {currentRecipe.nutritionFacts.fat}g
                     </Text>
                     <Text style={styles.nutritionLabel}>脂肪</Text>
                   </View>
@@ -524,286 +790,3 @@ export default function RecipeDetailScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    ...theme.typography.body,
-    color: theme.colors.textSecondary,
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginHorizontal: 4,
-  },
-  headerButtonActive: {
-    backgroundColor: theme.colors.background,
-  },
-  backButton: {
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    marginLeft: 16,
-  },
-  headerButtons: {
-    flexDirection: 'row',
-  },
-  imageContainer: {
-    height: IMAGE_HEIGHT,
-    overflow: 'hidden',
-  },
-  imageWrapper: {
-    height: IMAGE_HEIGHT,
-    width: '100%',
-  },
-  image: {
-    width: SCREEN_WIDTH,
-    height: IMAGE_HEIGHT,
-  },
-  imagePlaceholder: {
-    width: SCREEN_WIDTH,
-    height: IMAGE_HEIGHT,
-    backgroundColor: theme.colors.surface,
-  },
-  content: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-    borderTopLeftRadius: theme.spacing.lg,
-    borderTopRightRadius: theme.spacing.lg,
-    marginTop: -theme.spacing.lg,
-    paddingTop: theme.spacing.lg,
-  },
-  header: {
-    padding: theme.spacing.md,
-  },
-  title: {
-    ...theme.typography.h1,
-    color: theme.colors.text,
-    marginBottom: theme.spacing.xs,
-  },
-  description: {
-    ...theme.typography.body,
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.md,
-  },
-  metrics: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: theme.spacing.md,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: theme.colors.surface,
-  },
-  metricItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.xs,
-  },
-  metricValue: {
-    ...theme.typography.body,
-    color: theme.colors.text,
-  },
-  section: {
-    padding: theme.spacing.md,
-    borderTopWidth: 8,
-    borderTopColor: theme.colors.surface,
-  },
-  sectionTitle: {
-    ...theme.typography.h2,
-    color: theme.colors.text,
-    marginBottom: theme.spacing.md,
-  },
-  nutritionGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
-  },
-  nutritionItem: {
-    alignItems: 'center',
-    minWidth: '25%',
-  },
-  nutritionValue: {
-    ...theme.typography.h2,
-    color: theme.colors.text,
-  },
-  nutritionLabel: {
-    ...theme.typography.caption,
-    color: theme.colors.textSecondary,
-  },
-  ingredientGroup: {
-    marginBottom: theme.spacing.md,
-  },
-  ingredientGroupTitle: {
-    ...theme.typography.h3,
-    color: theme.colors.text,
-    marginBottom: theme.spacing.sm,
-  },
-  ingredientItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: theme.spacing.xs,
-  },
-  ingredientName: {
-    ...theme.typography.body,
-    color: theme.colors.text,
-  },
-  ingredientAmount: {
-    ...theme.typography.body,
-    color: theme.colors.textSecondary,
-  },
-  stepItem: {
-    marginBottom: theme.spacing.md,
-  },
-  stepHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: theme.spacing.sm,
-  },
-  stepNumber: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: theme.colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: theme.spacing.sm,
-    marginTop: 2,
-  },
-  stepNumberText: {
-    ...theme.typography.caption,
-    color: theme.colors.background,
-    fontWeight: 'bold',
-  },
-  stepDescription: {
-    flex: 1,
-    ...theme.typography.body,
-    color: theme.colors.text,
-  },
-  stepImage: {
-    width: '100%',
-    height: 200,
-    borderRadius: theme.spacing.sm,
-    marginTop: theme.spacing.sm,
-  },
-  errorText: {
-    ...theme.typography.body,
-    color: theme.colors.error,
-    marginBottom: theme.spacing.md,
-  },
-  retryButton: {
-    padding: 12,
-    borderRadius: 20,
-    backgroundColor: theme.colors.primary,
-    alignItems: 'center',
-  },
-  retryButtonText: {
-    ...theme.typography.body,
-    color: theme.colors.background,
-    fontWeight: 'bold',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: theme.colors.background,
-    borderTopLeftRadius: theme.spacing.lg,
-    borderTopRightRadius: theme.spacing.lg,
-    padding: theme.spacing.lg,
-  },
-  modalTitle: {
-    ...theme.typography.h2,
-    color: theme.colors.text,
-    marginBottom: theme.spacing.lg,
-    textAlign: 'center',
-  },
-  modalLabel: {
-    ...theme.typography.body,
-    color: theme.colors.text,
-    marginBottom: theme.spacing.sm,
-  },
-  mealTypeContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: theme.spacing.lg,
-  },
-  mealTypeButton: {
-    flex: 1,
-    padding: theme.spacing.sm,
-    borderRadius: theme.spacing.sm,
-    backgroundColor: theme.colors.surface,
-    marginHorizontal: theme.spacing.xs,
-    alignItems: 'center',
-  },
-  mealTypeButtonActive: {
-    backgroundColor: theme.colors.primary,
-  },
-  mealTypeText: {
-    ...theme.typography.body,
-    color: theme.colors.text,
-  },
-  mealTypeTextActive: {
-    color: theme.colors.background,
-  },
-  modalActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: theme.spacing.lg,
-  },
-  modalButton: {
-    flex: 1,
-    padding: theme.spacing.sm,
-    borderRadius: theme.spacing.sm,
-    marginHorizontal: theme.spacing.xs,
-    alignItems: 'center',
-  },
-  cancelButton: {
-    backgroundColor: theme.colors.surface,
-  },
-  confirmButton: {
-    backgroundColor: theme.colors.primary,
-  },
-  cancelButtonText: {
-    ...theme.typography.body,
-    color: theme.colors.text,
-  },
-  confirmButtonText: {
-    ...theme.typography.body,
-    color: theme.colors.background,
-  },
-  addToMealPlanButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.colors.primary,
-    padding: theme.spacing.sm,
-    borderRadius: theme.spacing.sm,
-    marginTop: theme.spacing.md,
-    gap: theme.spacing.sm,
-  },
-  addToMealPlanText: {
-    ...theme.typography.body,
-    color: theme.colors.background,
-    fontWeight: 'bold',
-  },
-  dateInput: {
-    backgroundColor: theme.colors.surface,
-    padding: theme.spacing.sm,
-    borderRadius: theme.spacing.sm,
-    color: theme.colors.text,
-    marginBottom: theme.spacing.md,
-    fontSize: 16,
-  },
-});

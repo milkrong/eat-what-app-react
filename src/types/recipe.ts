@@ -5,20 +5,27 @@ export interface Recipe {
   ingredients: Ingredient[] | null;
   steps: Step[] | null;
   calories: number | null;
+  cookingTime: number | null;
+  nutritionFacts: NutritionFacts | null;
+  cuisineType: string[] | null;
+  dietType: string[] | null;
+  createdBy: string | null;
+  views: number | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+  isFavorite?: boolean;
+  img?: string;
+}
+export interface DBRecipe extends Recipe {
   cooking_time: number | null;
-  nutrition_facts: NutritionFacts | null;
   cuisine_type: string[] | null;
   diet_type: string[] | null;
-  created_by: string | null;
-  views: number | null;
-  created_at: string | null;
-  updated_at: string | null;
-  is_favorite?: boolean;
-  img?: string;
+  nutrition_facts: NutritionFacts | null;
 }
 
 export interface RecipeFilters {
   cuisine_type?: string;
+
   max_cooking_time?: number;
   diet_type?: string[];
 }

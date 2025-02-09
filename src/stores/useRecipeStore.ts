@@ -97,7 +97,7 @@ const useRecipeStore = create<RecipeState>((set) => ({
 
       const isFavorite = favoritesData.some((fav: Recipe) => fav.id === id);
       set({
-        currentRecipe: { ...recipeData, is_favorite: isFavorite },
+        currentRecipe: { ...recipeData, isFavorite: isFavorite },
         favorites: favoritesData,
       });
     } catch (error) {
@@ -182,9 +182,9 @@ const useRecipeStore = create<RecipeState>((set) => ({
       set((state) => ({
         currentRecipe: state.currentRecipe && {
           ...state.currentRecipe,
-          is_favorite: !state.currentRecipe.is_favorite,
+          isFavorite: !state.currentRecipe.isFavorite,
         },
-        favorites: state.currentRecipe?.is_favorite
+        favorites: state.currentRecipe?.isFavorite
           ? state.favorites.filter((recipe) => recipe.id !== recipeId)
           : [...state.favorites, state.currentRecipe!],
       }));

@@ -15,6 +15,8 @@ import { router } from 'expo-router';
 import Toast, { useToastStore } from '@/components/Toast';
 import { useGlobalStore, Settings } from '@/stores/useGlobalStore';
 
+const ACTIVE_COLOR = '#FF9500';
+
 type IconName = keyof typeof FontAwesome.glyphMap;
 
 interface LLMService {
@@ -250,8 +252,8 @@ const styles = StyleSheet.create({
     padding: theme.spacing.sm,
   },
   serviceOptionActive: {
-    backgroundColor: theme.colors.primary + '10',
-    borderColor: theme.colors.primary,
+    backgroundColor: `${ACTIVE_COLOR}10`,
+    borderColor: ACTIVE_COLOR,
   },
   serviceIconContainer: {
     width: 40,
@@ -269,7 +271,7 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.xs,
   },
   serviceOptionTextActive: {
-    color: theme.colors.primary,
+    color: ACTIVE_COLOR,
   },
   inputContainer: {
     marginBottom: theme.spacing.md,
@@ -294,7 +296,7 @@ const styles = StyleSheet.create({
     borderTopColor: theme.colors.surface,
   },
   saveButton: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: ACTIVE_COLOR,
     padding: theme.spacing.md,
     borderRadius: theme.spacing.sm,
     alignItems: 'center',

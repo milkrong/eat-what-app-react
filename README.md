@@ -14,6 +14,7 @@
 - **测试**: Jest & React Native Testing Library
 
 ## 应用架构
+
 ## No
 
 ### 目录结构
@@ -108,7 +109,7 @@ interface MealPlan {
   user_id: string;
   recipe_id: string;
   date: string;
-  meal_type: 'breakfast' | 'lunch' | 'dinner' | 'snack';
+  mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack';
   created_at: string;
   updated_at: string;
 }
@@ -470,7 +471,7 @@ export const MealPlanCard: React.FC<MealPlanCardProps> = ({
       <View className="flex-row justify-between items-center mb-2">
         <Text className="text-lg font-bold">{recipe.name}</Text>
         <Text className="text-gray-500">
-          {formatMealType(mealPlan.meal_type)}
+          {formatMealType(mealPlan.mealType)}
         </Text>
       </View>
       <Text className="text-gray-600 mb-4">{formatDate(mealPlan.date)}</Text>

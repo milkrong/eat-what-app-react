@@ -5,7 +5,7 @@ export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 export interface MealPlan {
   id: string;
   date: string;
-  meal_type: MealType;
+  mealType: MealType;
   recipe: Recipe;
   portions: number;
   notes?: string;
@@ -13,7 +13,7 @@ export interface MealPlan {
 
 export type DailyMealPlan = Record<MealType, MealPlan[]>;
 
-export const MEAL_TYPE_CONFIG = {
+export const mealType_CONFIG = {
   breakfast: {
     label: '早餐',
     color: '#FFB74D',

@@ -63,13 +63,13 @@ export const useMealPlanStore = create<MealPlanState>((set, get) => ({
       // 按餐点类型分组
       const groupedMealPlans: DailyMealPlan = {
         breakfast: mealPlans.filter(
-          (meal: MealPlan) => meal.meal_type === 'breakfast'
+          (meal: MealPlan) => meal.mealType === 'breakfast'
         ),
-        lunch: mealPlans.filter((meal: MealPlan) => meal.meal_type === 'lunch'),
+        lunch: mealPlans.filter((meal: MealPlan) => meal.mealType === 'lunch'),
         dinner: mealPlans.filter(
-          (meal: MealPlan) => meal.meal_type === 'dinner'
+          (meal: MealPlan) => meal.mealType === 'dinner'
         ),
-        snack: mealPlans.filter((meal: MealPlan) => meal.meal_type === 'snack'),
+        snack: mealPlans.filter((meal: MealPlan) => meal.mealType === 'snack'),
       };
 
       set({ dailyPlan: groupedMealPlans, loading: false });
@@ -87,8 +87,8 @@ export const useMealPlanStore = create<MealPlanState>((set, get) => ({
         headers: getAuthHeaders(),
         body: JSON.stringify({
           date: `${date}T12:00:00Z`,
-          meal_type: mealType,
-          recipe_id: recipeId,
+          mealType: mealType,
+          recipeId: recipeId,
         }),
       });
 

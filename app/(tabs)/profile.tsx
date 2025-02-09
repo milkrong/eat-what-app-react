@@ -16,6 +16,8 @@ import { useAuthStore } from '@/stores/useAuthStore';
 import Toast, { useToastStore } from '@/components/Toast';
 import { useGlobalStore } from '@/stores/useGlobalStore';
 
+const ACTIVE_COLOR = '#FF9500';
+
 interface Settings {
   id: string;
   llmService: 'coze' | 'dify' | 'deepseek' | 'siliconflow' | 'custom';
@@ -145,11 +147,26 @@ const ProfileSkeleton = () => (
   </ScrollView>
 );
 
-const ProfileScreen = () => {
-  const { profile, loading: globalLoading, preferences, settings } = useGlobalStore();
-  const {  logout } = useAuthStore();
-  const { showToast } = useToastStore();
+const THEME_COLORS = [
+  { label: '橙色', value: '#FF9500' },
+  { label: '蓝色', value: '#007AFF' },
+  { label: '绿色', value: '#34C759' },
+  { label: '紫色', value: '#AF52DE' },
+  { label: '粉色', value: '#FF2D55' },
+  { label: '红色', value: '#FF3B30' },
+];
 
+const ProfileScreen = () => {
+  const {
+    profile,
+    loading: globalLoading,
+    preferences,
+    settings,
+    themeColor,
+    setThemeColor,
+  } = useGlobalStore();
+  const { logout } = useAuthStore();
+  const { showToast } = useToastStore();
 
   const handleLogout = async () => {
     try {
@@ -160,13 +177,9 @@ const ProfileScreen = () => {
     }
   };
 
-  const renderInfoItem = (
-    icon: IconName,
-    label: string,
-    value: string
-  ) => (
+  const renderInfoItem = (icon: IconName, label: string, value: string) => (
     <View style={styles.infoItem}>
-      <FontAwesome name={icon} size={20} color={theme.colors.primary} />
+      <FontAwesome name={icon} size={20} color={themeColor} />
       <View style={styles.infoContent}>
         <Text style={styles.infoLabel}>{label}</Text>
         <Text style={styles.infoValue}>{value}</Text>
@@ -219,11 +232,7 @@ const ProfileScreen = () => {
               onPress={() => router.push('/preferences' as any)}
             >
               <View style={styles.settingItemLeft}>
-                <FontAwesome
-                  name="sliders"
-                  size={20}
-                  color={theme.colors.primary}
-                />
+                <FontAwesome name="sliders" size={20} color={themeColor} />
                 <Text style={styles.settingItemText}>偏好设置</Text>
               </View>
               <View style={styles.settingItemRight}>
@@ -243,16 +252,16 @@ const ProfileScreen = () => {
               onPress={() => router.push('/llm-settings' as any)}
             >
               <View style={styles.settingItemLeft}>
-                <FontAwesome
-                  name="cog"
-                  size={20}
-                  color={theme.colors.primary}
-                />
+                <FontAwesome name="cog" size={20} color={themeColor} />
                 <Text style={styles.settingItemText}>AI 服务设置</Text>
               </View>
               <View style={styles.settingItemRight}>
                 <Text style={styles.settingItemValue}>
-                  {settings?.llmService ? llmServiceLabels[settings.llmService as keyof typeof llmServiceLabels] : '未设置'}
+                  {settings?.llmService
+                    ? llmServiceLabels[
+                        settings.llmService as keyof typeof llmServiceLabels
+                      ]
+                    : '未设置'}
                 </Text>
                 <FontAwesome
                   name="angle-right"
@@ -261,6 +270,33 @@ const ProfileScreen = () => {
                 />
               </View>
             </TouchableOpacity>
+          </View>
+
+          {/* 主题设置区域 */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>主题设置</Text>
+            {THEME_COLORS.map((color) => (
+              <TouchableOpacity
+                key={color.value}
+                style={styles.settingItem}
+                onPress={() => setThemeColor(color.value)}
+              >
+                <View style={styles.settingItemLeft}>
+                  <View
+                    style={[
+                      styles.colorPreview,
+                      { backgroundColor: color.value },
+                    ]}
+                  />
+                  <Text style={styles.settingItemText}>{color.label}</Text>
+                </View>
+                <View style={styles.settingItemRight}>
+                  {themeColor === color.value && (
+                    <FontAwesome name="check" size={20} color={themeColor} />
+                  )}
+                </View>
+              </TouchableOpacity>
+            ))}
           </View>
 
           {/* 退出登录按钮 */}
@@ -276,6 +312,8 @@ const ProfileScreen = () => {
     </SafeAreaView>
   );
 };
+
+export default ProfileScreen;
 
 const styles = StyleSheet.create({
   container: {
@@ -314,7 +352,7 @@ const styles = StyleSheet.create({
     paddingBottom: theme.spacing.lg,
   },
   saveButton: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: ACTIVE_COLOR,
     padding: theme.spacing.md,
     borderRadius: theme.spacing.sm,
     alignItems: 'center',
@@ -415,15 +453,15 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.surface,
   },
   chipActive: {
-    backgroundColor: theme.colors.primary + '20',
-    borderColor: theme.colors.primary,
+    backgroundColor: `${ACTIVE_COLOR}20`,
+    borderColor: ACTIVE_COLOR,
   },
   chipText: {
     ...theme.typography.caption,
     color: theme.colors.text,
   },
   chipTextActive: {
-    color: theme.colors.primary,
+    color: ACTIVE_COLOR,
   },
   input: {
     ...theme.typography.body,
@@ -473,6 +511,10 @@ const styles = StyleSheet.create({
     ...theme.typography.caption,
     color: theme.colors.textSecondary,
   },
+  colorPreview: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    marginRight: theme.spacing.md,
+  },
 });
-
-export default ProfileScreen;

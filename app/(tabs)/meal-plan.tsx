@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,23 +10,23 @@ import {
   Modal,
   FlatList,
   ActivityIndicator,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
   Calendar,
   CalendarProvider,
   WeekCalendar,
-} from 'react-native-calendars';
-import { FontAwesome } from '@expo/vector-icons';
-import { theme } from '../../src/theme';
-import type { MealType, MealPlan } from '../../src/types/meal-plan';
-import { mealType_CONFIG } from '../../src/types/meal-plan';
-import { useAuthStore } from '@/stores/useAuthStore';
-import { useMealPlanStore } from '@/stores/useMealPlanStore';
-import { router } from 'expo-router';
-import { useRecipeStore } from '@/stores/useRecipeStore';
-import Toast from 'react-native-toast-message';
-import { useGlobalStore } from '@/stores/useGlobalStore';
+} from "react-native-calendars";
+import { FontAwesome } from "@expo/vector-icons";
+import { theme } from "../../src/theme";
+import type { MealType, MealPlan } from "../../src/types/meal-plan";
+import { mealType_CONFIG } from "../../src/types/meal-plan";
+import { useAuthStore } from "@/stores/useAuthStore";
+import { useMealPlanStore } from "@/stores/useMealPlanStore";
+import { router } from "expo-router";
+import { useRecipeStore } from "@/stores/useRecipeStore";
+import Toast, { useToastStore } from "@/components/Toast";
+import { useGlobalStore } from "@/stores/useGlobalStore";
 
 // Skeleton styles
 const skeletonStyles = StyleSheet.create({
@@ -47,23 +47,23 @@ const skeletonStyles = StyleSheet.create({
     height: 20,
     backgroundColor: theme.colors.surface,
     borderRadius: 4,
-    width: '60%',
+    width: "60%",
   },
   skeletonText: {
     height: 16,
     backgroundColor: theme.colors.surface,
     borderRadius: 4,
-    width: '40%',
+    width: "40%",
   },
   nutritionStats: {
     padding: theme.spacing.md,
   },
   nutritionGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   nutritionItem: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   skeletonValue: {
     height: 24,
@@ -95,9 +95,9 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background,
   },
   calendarHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: theme.spacing.md,
   },
   calendarTitle: {
@@ -114,17 +114,17 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.lg,
   },
   mealTypeHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: theme.spacing.md,
     borderLeftWidth: 4,
     backgroundColor: theme.colors.surface,
     marginBottom: theme.spacing.sm,
   },
   mealTypeInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: theme.spacing.sm,
   },
   mealTypeLabel: {
@@ -139,11 +139,11 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   mealCard: {
-    flexDirection: 'row',
+    flexDirection: "row",
     backgroundColor: theme.colors.background,
     padding: theme.spacing.md,
     marginHorizontal: theme.spacing.md,
@@ -165,8 +165,8 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
   },
   mealCardActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: theme.spacing.sm,
   },
   listDeleteButton: {
@@ -183,11 +183,11 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.md,
   },
   nutritionGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   nutritionItem: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   nutritionValue: {
     ...theme.typography.h2,
@@ -199,19 +199,19 @@ const styles = StyleSheet.create({
   },
   drawerOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
   },
   drawerContent: {
     backgroundColor: theme.colors.background,
     borderTopLeftRadius: theme.spacing.lg,
     borderTopRightRadius: theme.spacing.lg,
-    maxHeight: '80%',
+    maxHeight: "80%",
   },
   drawerHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: theme.spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.surface,
@@ -234,8 +234,8 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surface,
   },
   recipeItemContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   recipeCheckbox: {
     width: 24,
@@ -244,8 +244,8 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: theme.colors.primary,
     marginRight: theme.spacing.md,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   recipeInfo: {
     flex: 1,
@@ -263,7 +263,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primary,
     padding: theme.spacing.md,
     borderRadius: theme.spacing.sm,
-    alignItems: 'center',
+    alignItems: "center",
   },
   confirmButtonDisabled: {
     opacity: 0.5,
@@ -271,19 +271,19 @@ const styles = StyleSheet.create({
   confirmButtonText: {
     ...theme.typography.body,
     color: theme.colors.background,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   modalContent: {
     backgroundColor: theme.colors.background,
     borderRadius: theme.spacing.lg,
     padding: theme.spacing.lg,
-    width: '80%',
+    width: "80%",
   },
   modalHeader: {
     marginBottom: theme.spacing.md,
@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     ...theme.typography.h2,
     color: theme.colors.text,
-    textAlign: 'center',
+    textAlign: "center",
   },
   modalBody: {
     marginBottom: theme.spacing.lg,
@@ -299,19 +299,19 @@ const styles = StyleSheet.create({
   modalText: {
     ...theme.typography.body,
     color: theme.colors.text,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: theme.spacing.md,
   },
   modalFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     gap: theme.spacing.md,
   },
   modalButton: {
     flex: 1,
     padding: theme.spacing.md,
     borderRadius: theme.spacing.sm,
-    alignItems: 'center',
+    alignItems: "center",
   },
   cancelButton: {
     backgroundColor: theme.colors.surface,
@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
   },
   errorContainer: {
     padding: theme.spacing.md,
-    alignItems: 'center',
+    alignItems: "center",
   },
   errorText: {
     ...theme.typography.body,
@@ -374,7 +374,7 @@ function SkeletonLoader() {
 
   const renderSkeletonCard = (index: number) => (
     <Animated.View
-      key={'skeleton_card' + index}
+      key={"skeleton_card" + index}
       style={[skeletonStyles.skeletonCard, { opacity }]}
     >
       <View style={skeletonStyles.skeletonContent}>
@@ -391,7 +391,7 @@ function SkeletonLoader() {
         <View style={skeletonStyles.nutritionGrid}>
           {[...Array(4)].map((_, i) => (
             <View
-              key={'skeleton_nutrition' + i}
+              key={"skeleton_nutrition" + i}
               style={skeletonStyles.nutritionItem}
             >
               <View style={skeletonStyles.skeletonValue} />
@@ -401,7 +401,7 @@ function SkeletonLoader() {
         </View>
       </View>
       {Object.keys(mealType_CONFIG).map((type) => (
-        <View key={type + 'skeleton2'} style={skeletonStyles.mealSection}>
+        <View key={type + "skeleton2"} style={skeletonStyles.mealSection}>
           <View style={skeletonStyles.skeletonHeader} />
           {[...Array(2)].map((_, i) => renderSkeletonCard(i))}
         </View>
@@ -412,7 +412,7 @@ function SkeletonLoader() {
 
 export default function MealPlanScreen() {
   const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().split('T')[0]
+    new Date().toISOString().split("T")[0]
   );
   const [isMonthView, setIsMonthView] = useState(true);
   const [showRecipeDrawer, setShowRecipeDrawer] = useState(false);
@@ -431,6 +431,7 @@ export default function MealPlanScreen() {
     useMealPlanStore();
   const { recipes, loading: recipesLoading, fetchRecipes } = useRecipeStore();
   const { themeColor } = useGlobalStore();
+  const { showToast } = useToastStore();
 
   useEffect(() => {
     if (session?.access_token) {
@@ -455,21 +456,9 @@ export default function MealPlanScreen() {
       );
       await Promise.all(promises);
       setShowRecipeDrawer(false);
-      Toast.show({
-        type: 'success',
-        text1: '添加成功',
-        text2: `已添加 ${selectedRecipes.size} 个食谱到餐单`,
-        position: 'bottom',
-        visibilityTime: 2000,
-      });
+      showToast("添加成功", "success");
     } catch (error) {
-      Toast.show({
-        type: 'error',
-        text1: '添加失败',
-        text2: '请稍后重试',
-        position: 'bottom',
-        visibilityTime: 2000,
-      });
+      showToast("添加失败", "error");
     } finally {
       setIsAdding(false);
     }
@@ -502,22 +491,10 @@ export default function MealPlanScreen() {
     try {
       setDeletingMealId(mealToDelete.id);
       await deleteMeal(mealToDelete.id, selectedDate);
-      Toast.show({
-        type: 'success',
-        text1: '删除成功',
-        text2: '已从餐单中移除',
-        position: 'bottom',
-        visibilityTime: 2000,
-      });
+      showToast("删除成功", "success");
       setShowDeleteModal(false);
     } catch (error) {
-      Toast.show({
-        type: 'error',
-        text1: '删除失败',
-        text2: '请稍后重试',
-        position: 'bottom',
-        visibilityTime: 2000,
-      });
+      showToast("删除失败", "error");
     } finally {
       setDeletingMealId(null);
       setMealToDelete(null);
@@ -766,9 +743,9 @@ export default function MealPlanScreen() {
       {/* 日历标题 */}
       <View style={styles.calendarHeader}>
         <Text style={styles.calendarTitle}>
-          {new Date(selectedDate).toLocaleDateString('zh-CN', {
-            month: 'long',
-            day: 'numeric',
+          {new Date(selectedDate).toLocaleDateString("zh-CN", {
+            month: "long",
+            day: "numeric",
           })}
         </Text>
         <TouchableOpacity
@@ -776,7 +753,7 @@ export default function MealPlanScreen() {
           onPress={() => setIsMonthView(!isMonthView)}
         >
           <FontAwesome
-            name={isMonthView ? 'calendar' : 'calendar-o'}
+            name={isMonthView ? "calendar" : "calendar-o"}
             size={20}
             color={theme.colors.text}
           />

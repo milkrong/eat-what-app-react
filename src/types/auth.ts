@@ -26,6 +26,7 @@ export interface LoginInput {
 
 export interface RegisterInput extends LoginInput {
   username: string;
+  avatar_url?: string;
 }
 
 export interface AuthResponse {

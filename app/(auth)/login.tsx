@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -7,31 +7,31 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Image,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { theme } from '@/theme';
-import { useAuthStore } from '@/stores/useAuthStore';
-import { router } from 'expo-router';
-import Toast, { useToastStore } from '@/components/Toast';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { theme } from "@/theme";
+import { useAuthStore } from "@/stores/useAuthStore";
+import { router } from "expo-router";
+import Toast, { useToastStore } from "@/components/Toast";
 
 const LoginScreen = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const { login, loading } = useAuthStore();
   const { showToast } = useToastStore();
 
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: '#FFFFFF',
+      backgroundColor: "#FFFFFF",
     },
     content: {
       flex: 1,
       padding: 24,
-      justifyContent: 'center',
+      justifyContent: "center",
     },
     header: {
-      alignItems: 'center',
+      alignItems: "center",
       marginBottom: 48,
     },
     logo: {
@@ -41,14 +41,14 @@ const LoginScreen = () => {
     },
     title: {
       fontSize: 28,
-      fontWeight: '600',
-      color: '#1A1A1A',
+      fontWeight: "600",
+      color: "#1A1A1A",
       marginBottom: 8,
     },
     subtitle: {
       fontSize: 16,
-      color: '#666666',
-      textAlign: 'center',
+      color: "#666666",
+      textAlign: "center",
       marginBottom: 32,
     },
     inputContainer: {
@@ -56,74 +56,74 @@ const LoginScreen = () => {
     },
     label: {
       fontSize: 14,
-      color: '#1A1A1A',
+      color: "#1A1A1A",
       marginBottom: 8,
     },
     input: {
-      backgroundColor: '#F5F5F5',
+      backgroundColor: "#F5F5F5",
       borderRadius: 8,
       padding: 16,
       fontSize: 16,
-      color: '#1A1A1A',
+      color: "#1A1A1A",
       borderWidth: 1,
-      borderColor: '#E0E0E0',
+      borderColor: "#E0E0E0",
     },
     inputFocused: {
-      borderColor: '#666666',
+      borderColor: "#666666",
     },
     loginButton: {
-      backgroundColor: '#1A1A1A',
+      backgroundColor: "#1A1A1A",
       borderRadius: 8,
       padding: 16,
-      alignItems: 'center',
+      alignItems: "center",
       marginTop: 16,
     },
     loginButtonDisabled: {
-      backgroundColor: '#E0E0E0',
+      backgroundColor: "#E0E0E0",
     },
     loginButtonText: {
-      color: '#FFFFFF',
+      color: "#FFFFFF",
       fontSize: 16,
-      fontWeight: '600',
+      fontWeight: "600",
     },
     forgotPassword: {
-      alignItems: 'center',
+      alignItems: "center",
       marginTop: 16,
     },
     forgotPasswordText: {
-      color: '#666666',
+      color: "#666666",
       fontSize: 14,
     },
     footer: {
-      flexDirection: 'row',
-      justifyContent: 'center',
+      flexDirection: "row",
+      justifyContent: "center",
       marginTop: 32,
     },
     footerText: {
-      color: '#666666',
+      color: "#666666",
       fontSize: 14,
     },
     signupButton: {
       marginLeft: 4,
     },
     signupButtonText: {
-      color: '#1A1A1A',
+      color: "#1A1A1A",
       fontSize: 14,
-      fontWeight: '600',
+      fontWeight: "600",
     },
   });
 
   const handleLogin = async () => {
     if (!email || !password) {
-      showToast('请输入邮箱和密码', 'error');
+      showToast("请输入邮箱和密码", "error");
       return;
     }
 
     try {
       await login({ email, password });
-      router.replace('/(tabs)' as any);
+      router.replace("/(tabs)" as any);
     } catch (error) {
-      showToast('登录失败', 'error');
+      showToast("登录失败", "error");
     }
   };
 
@@ -132,7 +132,7 @@ const LoginScreen = () => {
       <View style={styles.content}>
         <View style={styles.header}>
           <Image
-            source={require('../../assets/images/icon.png')}
+            source={require("../../assets/images/icon.png")}
             style={styles.logo}
           />
           <Text style={styles.title}>欢迎回来</Text>
@@ -182,7 +182,10 @@ const LoginScreen = () => {
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>还没有账号？</Text>
-          <TouchableOpacity style={styles.signupButton}>
+          <TouchableOpacity
+            style={styles.signupButton}
+            onPress={() => router.push("/register")}
+          >
             <Text style={styles.signupButtonText}>立即注册</Text>
           </TouchableOpacity>
         </View>

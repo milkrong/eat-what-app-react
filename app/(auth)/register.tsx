@@ -152,7 +152,7 @@ export default function RegisterScreen() {
         )}
       />
 
-      <TouchableOpacity style={styles.button} onPress={handleNextStep}>
+      <TouchableOpacity style={styles.singleButton} onPress={handleNextStep}>
         <Text style={styles.buttonText}>下一步</Text>
       </TouchableOpacity>
     </>
@@ -327,6 +327,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 16,
     flex: 1,
+  },
+  singleButton: {
+    backgroundColor: "#1A1A1A",
+    borderRadius: 8,
+    padding: 16,
+    alignItems: "center",
+    marginTop: 16,
   },
   buttonGroup: {
     flexDirection: "row",

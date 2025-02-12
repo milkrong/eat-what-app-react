@@ -1,49 +1,50 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
   TextInput,
   Image,
   RefreshControl,
   FlatList,
   Dimensions,
   ActivityIndicator,
-  Alert,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
-import { FontAwesome } from '@expo/vector-icons';
-import { theme } from '../../../src/theme';
-import type { Recipe } from '../../../src/types/recipe';
-import { useAuthStore } from '@/stores/useAuthStore';
-import { useRecipeStore } from '@/stores/useRecipeStore';
-import { useGlobalStore } from '@/stores/useGlobalStore';
-
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { router } from "expo-router";
+import { FontAwesome } from "@expo/vector-icons";
+import { theme } from "../../../src/theme";
+import type { Recipe } from "../../../src/types/recipe";
+import { useAuthStore } from "@/stores/useAuthStore";
+import { useRecipeStore } from "@/stores/useRecipeStore";
+import { useGlobalStore } from "@/stores/useGlobalStore";
+import Toast, { useToastStore } from "@/components/Toast";
+import ConfirmModal from "@/components/ConfirmModal";
 // 分类数据
 const categories = [
-  { id: 'all', name: '全部' },
-  { id: 'chinese', name: '中餐' },
-  { id: 'western', name: '西餐' },
-  { id: 'japanese', name: '日料' },
-  { id: 'korean', name: '韩餐' },
-  { id: 'dessert', name: '甜点' },
+  { id: "all", name: "全部" },
+  { id: "chinese", name: "中餐" },
+  { id: "western", name: "西餐" },
+  { id: "japanese", name: "日料" },
+  { id: "korean", name: "韩餐" },
+  { id: "dessert", name: "甜点" },
 ];
 
-const { width } = Dimensions.get('window');
+const { width } = Dimensions.get("window");
 const CARD_MARGIN = theme.spacing.md;
 const CARD_WIDTH = (width - theme.spacing.md * 2 - CARD_MARGIN) / 2;
 
 export default function RecipeListScreen() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
   const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [isManageMode, setIsManageMode] = useState(false);
   const [selectedRecipes, setSelectedRecipes] = useState<string[]>([]);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const {
     recipes,
     loading,
@@ -55,22 +56,22 @@ export default function RecipeListScreen() {
   } = useRecipeStore();
   const { session } = useAuthStore();
   const { themeColor } = useGlobalStore();
-
+  const { showToast } = useToastStore();
   const styles = StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: theme.colors.surface,
     },
     header: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       paddingHorizontal: theme.spacing.md,
       paddingVertical: theme.spacing.sm,
     },
     searchContainer: {
       flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       backgroundColor: theme.colors.surface,
       borderRadius: theme.spacing.sm,
       paddingHorizontal: theme.spacing.md,
@@ -91,8 +92,8 @@ export default function RecipeListScreen() {
     },
     categoryButton: {
       height: 38,
-      justifyContent: 'center',
-      alignItems: 'center',
+      justifyContent: "center",
+      alignItems: "center",
       paddingHorizontal: theme.spacing.sm,
       paddingVertical: 7,
       borderRadius: theme.spacing.md,
@@ -108,7 +109,7 @@ export default function RecipeListScreen() {
     },
     categoryTextActive: {
       color: themeColor,
-      fontWeight: 'bold',
+      fontWeight: "bold",
     },
     listContent: {
       padding: theme.spacing.md,
@@ -129,23 +130,23 @@ export default function RecipeListScreen() {
       elevation: 3,
     },
     imageContainer: {
-      position: 'relative',
+      position: "relative",
     },
     image: {
-      width: '100%',
+      width: "100%",
       height: CARD_WIDTH * 0.5625,
       borderTopLeftRadius: theme.spacing.sm,
       borderTopRightRadius: theme.spacing.sm,
     },
     imagePlaceholder: {
-      width: '100%',
+      width: "100%",
       height: CARD_WIDTH * 0.5625,
       backgroundColor: theme.colors.surface,
       borderTopLeftRadius: theme.spacing.sm,
       borderTopRightRadius: theme.spacing.sm,
     },
     favoriteButton: {
-      position: 'absolute',
+      position: "absolute",
       top: theme.spacing.sm,
       right: theme.spacing.sm,
       backgroundColor: theme.colors.background,
@@ -166,8 +167,8 @@ export default function RecipeListScreen() {
       marginBottom: theme.spacing.xs,
     },
     cardMetrics: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
+      flexDirection: "row",
+      justifyContent: "space-between",
     },
     metricText: {
       ...theme.typography.caption,
@@ -182,15 +183,15 @@ export default function RecipeListScreen() {
       borderRadius: theme.spacing.sm,
       marginBottom: theme.spacing.md,
       marginRight: CARD_MARGIN,
-      overflow: 'hidden',
+      overflow: "hidden",
       elevation: 2,
-      shadowColor: '#000',
+      shadowColor: "#000",
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.1,
       shadowRadius: 4,
     },
     recipeImage: {
-      width: '100%',
+      width: "100%",
       height: CARD_WIDTH,
     },
     recipeInfo: {
@@ -202,13 +203,13 @@ export default function RecipeListScreen() {
       marginBottom: theme.spacing.xs,
     },
     recipeMetrics: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
     },
     metricItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       gap: theme.spacing.xs,
     },
     manageButton: {
@@ -223,7 +224,7 @@ export default function RecipeListScreen() {
       color: themeColor,
     },
     checkbox: {
-      position: 'absolute',
+      position: "absolute",
       top: theme.spacing.sm,
       right: theme.spacing.sm,
       width: 24,
@@ -231,16 +232,16 @@ export default function RecipeListScreen() {
       borderRadius: 12,
       borderWidth: 2,
       borderColor: theme.colors.background,
-      backgroundColor: 'transparent',
-      justifyContent: 'center',
-      alignItems: 'center',
+      backgroundColor: "transparent",
+      justifyContent: "center",
+      alignItems: "center",
     },
     checkboxSelected: {
       backgroundColor: themeColor,
       borderColor: themeColor,
     },
     deleteButtonContainer: {
-      position: 'absolute',
+      position: "absolute",
       bottom: 0,
       left: 0,
       right: 0,
@@ -253,12 +254,12 @@ export default function RecipeListScreen() {
       backgroundColor: theme.colors.error,
       borderRadius: theme.spacing.sm,
       paddingVertical: theme.spacing.md,
-      alignItems: 'center',
+      alignItems: "center",
     },
     deleteButtonText: {
       ...theme.typography.body,
       color: theme.colors.background,
-      fontWeight: 'bold',
+      fontWeight: "bold",
     },
   });
 
@@ -298,33 +299,24 @@ export default function RecipeListScreen() {
     }
   };
 
-  const handleDeleteSelected = async () => {
-    if (selectedRecipes.length === 0) return;
+  const handleDeleteRecipes = async () => {
+    try {
+      setIsDeleting(true);
+      await deleteRecipes(selectedRecipes);
+      setSelectedRecipes([]);
+      setIsManageMode(false);
+      onRefresh();
+      showToast("删除成功", "success");
+    } catch (error) {
+      showToast("删除失败", "error");
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  };
 
-    Alert.alert(
-      '确认删除',
-      `确定要删除选中的 ${selectedRecipes.length} 个食谱吗？`,
-      [
-        {
-          text: '取消',
-          style: 'cancel',
-        },
-        {
-          text: '删除',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteRecipes(selectedRecipes);
-              setSelectedRecipes([]);
-              setIsManageMode(false);
-              onRefresh();
-            } catch (error) {
-              Alert.alert('错误', '删除食谱失败');
-            }
-          },
-        },
-      ]
-    );
+  const confirmDelete = () => {
+    setShowDeleteConfirm(true);
   };
 
   const toggleRecipeSelection = (recipeId: string) => {
@@ -353,7 +345,7 @@ export default function RecipeListScreen() {
         <View style={styles.imageContainer}>
           <Image
             source={{
-              uri: item.img || 'https://via.placeholder.com/300',
+              uri: item.img || "https://via.placeholder.com/300",
             }}
             style={styles.recipeImage}
           />
@@ -421,7 +413,7 @@ export default function RecipeListScreen() {
           }}
         >
           <Text style={styles.manageButtonText}>
-            {isManageMode ? '完成' : '管理'}
+            {isManageMode ? "完成" : "管理"}
           </Text>
         </TouchableOpacity>
       </View>
@@ -453,16 +445,24 @@ export default function RecipeListScreen() {
       {/* 删除按钮 */}
       {isManageMode && selectedRecipes.length > 0 && (
         <View style={styles.deleteButtonContainer}>
-          <TouchableOpacity
-            style={styles.deleteButton}
-            onPress={handleDeleteSelected}
-          >
+          <TouchableOpacity style={styles.deleteButton} onPress={confirmDelete}>
             <Text style={styles.deleteButtonText}>
               删除选中的食谱 ({selectedRecipes.length})
             </Text>
           </TouchableOpacity>
         </View>
       )}
+      <ConfirmModal
+        visible={showDeleteConfirm}
+        title="确认删除"
+        message={`确定要删除选中的 ${selectedRecipes.length} 个食谱吗？`}
+        confirmText="删除"
+        onConfirm={handleDeleteRecipes}
+        onCancel={() => setShowDeleteConfirm(false)}
+        loading={isDeleting}
+        destructive
+      />
+      <Toast />
     </SafeAreaView>
   );
 }

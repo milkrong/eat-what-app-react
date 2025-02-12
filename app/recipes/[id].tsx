@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -8,18 +8,18 @@ import {
   Dimensions,
   Animated,
   Modal,
-  Alert,
   TextInput,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, Stack, router } from 'expo-router';
-import { FontAwesome } from '@expo/vector-icons';
-import { theme } from '../../src/theme';
-import { useAuthStore } from '@/stores/useAuthStore';
-import { useRecipeStore } from '@/stores/useRecipeStore';
-import { useGlobalStore } from '@/stores/useGlobalStore';
-import { useMealPlanStore } from '@/stores/useMealPlanStore';
-import { MealType } from '@/types/meal-plan';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useLocalSearchParams, Stack, router } from "expo-router";
+import { FontAwesome } from "@expo/vector-icons";
+import { theme } from "../../src/theme";
+import { useAuthStore } from "@/stores/useAuthStore";
+import { useRecipeStore } from "@/stores/useRecipeStore";
+import { useGlobalStore } from "@/stores/useGlobalStore";
+import { useMealPlanStore } from "@/stores/useMealPlanStore";
+import { MealType } from "@/types/meal-plan";
+import Toast, { useToastStore } from "@/components/Toast";
 
 interface Step {
   order: number;
@@ -27,7 +27,7 @@ interface Step {
   image_url?: string;
 }
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const IMAGE_HEIGHT = SCREEN_WIDTH * 0.75;
 
 const SkeletonLoader = ({
@@ -80,9 +80,9 @@ const SkeletonLoader = ({
 };
 
 const mealTypeS: { id: MealType; name: string }[] = [
-  { id: 'breakfast', name: '早餐' },
-  { id: 'lunch', name: '午餐' },
-  { id: 'dinner', name: '晚餐' },
+  { id: "breakfast", name: "早餐" },
+  { id: "lunch", name: "午餐" },
+  { id: "dinner", name: "晚餐" },
 ];
 
 export default function RecipeDetailScreen() {
@@ -99,10 +99,11 @@ export default function RecipeDetailScreen() {
   const [dateInput, setDateInput] = useState(() => {
     const today = new Date();
     const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
   });
+  const { showToast } = useToastStore();
 
   const styles = StyleSheet.create({
     container: {
@@ -111,8 +112,8 @@ export default function RecipeDetailScreen() {
     },
     loadingContainer: {
       flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
+      justifyContent: "center",
+      alignItems: "center",
     },
     loadingText: {
       ...theme.typography.body,
@@ -122,28 +123,28 @@ export default function RecipeDetailScreen() {
       width: 40,
       height: 40,
       borderRadius: 20,
-      backgroundColor: 'rgba(0, 0, 0, 0.3)',
-      justifyContent: 'center',
-      alignItems: 'center',
+      backgroundColor: "rgba(0, 0, 0, 0.3)",
+      justifyContent: "center",
+      alignItems: "center",
       marginHorizontal: 4,
     },
     headerButtonActive: {
       backgroundColor: theme.colors.background,
     },
     backButton: {
-      backgroundColor: 'rgba(0, 0, 0, 0.3)',
+      backgroundColor: "rgba(0, 0, 0, 0.3)",
       marginLeft: 16,
     },
     headerButtons: {
-      flexDirection: 'row',
+      flexDirection: "row",
     },
     imageContainer: {
       height: IMAGE_HEIGHT,
-      overflow: 'hidden',
+      overflow: "hidden",
     },
     imageWrapper: {
       height: IMAGE_HEIGHT,
-      width: '100%',
+      width: "100%",
     },
     image: {
       width: SCREEN_WIDTH,
@@ -176,16 +177,16 @@ export default function RecipeDetailScreen() {
       marginBottom: theme.spacing.md,
     },
     metrics: {
-      flexDirection: 'row',
-      justifyContent: 'space-around',
+      flexDirection: "row",
+      justifyContent: "space-around",
       paddingVertical: theme.spacing.md,
       borderTopWidth: 1,
       borderBottomWidth: 1,
       borderColor: theme.colors.surface,
     },
     metricItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       gap: theme.spacing.xs,
     },
     metricValue: {
@@ -203,13 +204,13 @@ export default function RecipeDetailScreen() {
       marginBottom: theme.spacing.md,
     },
     nutritionGrid: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      flexWrap: 'wrap',
+      flexDirection: "row",
+      justifyContent: "space-between",
+      flexWrap: "wrap",
     },
     nutritionItem: {
-      alignItems: 'center',
-      minWidth: '25%',
+      alignItems: "center",
+      minWidth: "25%",
     },
     nutritionValue: {
       ...theme.typography.h2,
@@ -228,9 +229,9 @@ export default function RecipeDetailScreen() {
       marginBottom: theme.spacing.sm,
     },
     ingredientItem: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
       paddingVertical: theme.spacing.xs,
     },
     ingredientName: {
@@ -245,8 +246,8 @@ export default function RecipeDetailScreen() {
       marginBottom: theme.spacing.md,
     },
     stepHeader: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
+      flexDirection: "row",
+      alignItems: "flex-start",
       marginBottom: theme.spacing.sm,
     },
     stepNumber: {
@@ -254,15 +255,15 @@ export default function RecipeDetailScreen() {
       height: 24,
       borderRadius: 12,
       backgroundColor: themeColor,
-      justifyContent: 'center',
-      alignItems: 'center',
+      justifyContent: "center",
+      alignItems: "center",
       marginRight: theme.spacing.sm,
       marginTop: 2,
     },
     stepNumberText: {
       ...theme.typography.caption,
       color: theme.colors.background,
-      fontWeight: 'bold',
+      fontWeight: "bold",
     },
     stepDescription: {
       flex: 1,
@@ -270,7 +271,7 @@ export default function RecipeDetailScreen() {
       color: theme.colors.text,
     },
     stepImage: {
-      width: '100%',
+      width: "100%",
       height: 200,
       borderRadius: theme.spacing.sm,
       marginTop: theme.spacing.sm,
@@ -284,17 +285,17 @@ export default function RecipeDetailScreen() {
       padding: 12,
       borderRadius: 20,
       backgroundColor: themeColor,
-      alignItems: 'center',
+      alignItems: "center",
     },
     retryButtonText: {
       ...theme.typography.body,
       color: theme.colors.background,
-      fontWeight: 'bold',
+      fontWeight: "bold",
     },
     modalOverlay: {
       flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      justifyContent: 'flex-end',
+      backgroundColor: "rgba(0, 0, 0, 0.5)",
+      justifyContent: "flex-end",
     },
     modalContent: {
       backgroundColor: theme.colors.background,
@@ -306,7 +307,7 @@ export default function RecipeDetailScreen() {
       ...theme.typography.h2,
       color: theme.colors.text,
       marginBottom: theme.spacing.lg,
-      textAlign: 'center',
+      textAlign: "center",
     },
     modalLabel: {
       ...theme.typography.body,
@@ -314,8 +315,8 @@ export default function RecipeDetailScreen() {
       marginBottom: theme.spacing.sm,
     },
     mealTypeContainer: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
+      flexDirection: "row",
+      justifyContent: "space-between",
       marginBottom: theme.spacing.lg,
     },
     mealTypeButton: {
@@ -324,7 +325,7 @@ export default function RecipeDetailScreen() {
       borderRadius: theme.spacing.sm,
       backgroundColor: theme.colors.surface,
       marginHorizontal: theme.spacing.xs,
-      alignItems: 'center',
+      alignItems: "center",
     },
     mealTypeButtonActive: {
       backgroundColor: themeColor,
@@ -337,8 +338,8 @@ export default function RecipeDetailScreen() {
       color: theme.colors.background,
     },
     modalActions: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
+      flexDirection: "row",
+      justifyContent: "space-between",
       marginTop: theme.spacing.lg,
     },
     modalButton: {
@@ -346,7 +347,7 @@ export default function RecipeDetailScreen() {
       padding: theme.spacing.sm,
       borderRadius: theme.spacing.sm,
       marginHorizontal: theme.spacing.xs,
-      alignItems: 'center',
+      alignItems: "center",
     },
     cancelButton: {
       backgroundColor: theme.colors.surface,
@@ -363,9 +364,9 @@ export default function RecipeDetailScreen() {
       color: theme.colors.background,
     },
     addToMealPlanButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
       backgroundColor: themeColor,
       padding: theme.spacing.sm,
       borderRadius: theme.spacing.sm,
@@ -375,7 +376,7 @@ export default function RecipeDetailScreen() {
     addToMealPlanText: {
       ...theme.typography.body,
       color: theme.colors.background,
-      fontWeight: 'bold',
+      fontWeight: "bold",
     },
     dateInput: {
       backgroundColor: theme.colors.surface,
@@ -481,14 +482,14 @@ export default function RecipeDetailScreen() {
     try {
       await toggleFavorite(currentRecipe.id);
     } catch (error) {
-      console.error('收藏失败:', error);
+      console.error("收藏失败:", error);
     }
   };
 
   const imageTranslateY = scrollY.interpolate({
     inputRange: [-IMAGE_HEIGHT, 0, IMAGE_HEIGHT],
     outputRange: [IMAGE_HEIGHT / 2, 0, -IMAGE_HEIGHT / 3],
-    extrapolate: 'clamp',
+    extrapolate: "clamp",
   });
 
   const renderIngredients = () => {
@@ -532,13 +533,12 @@ export default function RecipeDetailScreen() {
         .getState()
         .addMeal(dateInput, selectedMealType, currentRecipe.id);
 
-      Alert.alert('成功', '已添加到餐饮计划');
+      showToast("已添加到餐饮计划", "success");
       setShowMealPlanModal(false);
-      setDateInput('');
+      setDateInput("");
       setSelectedMealType(null);
     } catch (error) {
-      console.error('添加到餐饮计划失败:', error);
-      Alert.alert('错误', '添加到餐饮计划失败');
+      showToast("添加失败", "error");
     }
   };
 
@@ -590,7 +590,7 @@ export default function RecipeDetailScreen() {
               style={[styles.modalButton, styles.cancelButton]}
               onPress={() => {
                 setShowMealPlanModal(false);
-                setDateInput('');
+                setDateInput("");
                 setSelectedMealType(null);
               }}
             >
@@ -637,7 +637,7 @@ export default function RecipeDetailScreen() {
       <Stack.Screen
         options={{
           headerTransparent: true,
-          headerTitle: '',
+          headerTitle: "",
           headerLeft: () => (
             <TouchableOpacity
               style={[styles.headerButton, styles.backButton]}
@@ -666,7 +666,7 @@ export default function RecipeDetailScreen() {
                 onPress={handleToggleFavorite}
               >
                 <FontAwesome
-                  name={currentRecipe?.isFavorite ? 'heart' : 'heart-o'}
+                  name={currentRecipe?.isFavorite ? "heart" : "heart-o"}
                   size={20}
                   color={
                     currentRecipe?.isFavorite
@@ -787,6 +787,7 @@ export default function RecipeDetailScreen() {
         </View>
       </Animated.ScrollView>
       {renderMealPlanModal()}
+      <Toast />
     </SafeAreaView>
   );
 }

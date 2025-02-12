@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Animated,
-  Alert,
   Modal,
   FlatList,
   ActivityIndicator,
@@ -27,6 +26,7 @@ import { router } from "expo-router";
 import { useRecipeStore } from "@/stores/useRecipeStore";
 import Toast, { useToastStore } from "@/components/Toast";
 import { useGlobalStore } from "@/stores/useGlobalStore";
+import ConfirmModal from "@/components/ConfirmModal";
 
 // Skeleton styles
 const skeletonStyles = StyleSheet.create({
@@ -688,54 +688,19 @@ export default function MealPlanScreen() {
   );
 
   const renderDeleteModal = () => (
-    <Modal
-      animationType="fade"
-      transparent={true}
+    <ConfirmModal
       visible={showDeleteModal}
-      onRequestClose={() => {
+      title="确认删除"
+      message="确定要删除这个餐品吗？"
+      confirmText="删除"
+      onConfirm={confirmDelete}
+      onCancel={() => {
         setShowDeleteModal(false);
         setMealToDelete(null);
       }}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>确认删除</Text>
-          </View>
-          <View style={styles.modalBody}>
-            <Text style={styles.modalText}>确定要删除这个餐品吗？</Text>
-            {mealToDelete && (
-              <Text style={styles.mealName}>{mealToDelete.recipe.name}</Text>
-            )}
-          </View>
-          <View style={styles.modalFooter}>
-            <TouchableOpacity
-              style={[styles.modalButton, styles.cancelButton]}
-              onPress={() => {
-                setShowDeleteModal(false);
-                setMealToDelete(null);
-              }}
-            >
-              <Text style={styles.cancelButtonText}>取消</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.modalButton, styles.deleteButton]}
-              onPress={confirmDelete}
-              disabled={deletingMealId !== null}
-            >
-              {deletingMealId ? (
-                <ActivityIndicator
-                  size="small"
-                  color={theme.colors.background}
-                />
-              ) : (
-                <Text style={styles.deleteButtonText}>删除</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </Modal>
+      loading={deletingMealId !== null}
+      destructive
+    />
   );
 
   return (
